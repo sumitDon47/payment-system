@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package payment;
+
+option go_package = "github.com/yourname/payment-system/payment-service/proto";
+
+// ─────────────────────────────────────────
+//  Service definition
+// ─────────────────────────────────────────
+
+service PaymentService {
+  rpc SendPayment    (SendPaymentRequest)    returns (SendPaymentResponse);
+  rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse);
+  rpc GetBalance     (GetBalanceRequest)     returns (GetBalanceResponse);
+}
+
+// ─────────────────────────────────────────
+//  SendPayment
+// ─────────────────────────────────────────
+
+message SendPaymentRequest {
+  string sender_id   = 1;
+  string receiver_id = 2;
+  double amount      = 3;
+  string currency    = 4;   // e.g. "NPR", "USD"
+  string note        = 5;   // optional memo
+}
+
+message SendPaymentResponse {
+  string transaction_id = 1;
+  string status         = 2; // "completed" | "failed"
+  double sender_balance = 3; // new balance after transfer
+  string message        = 4;
+  string created_at     = 5;
+}
+
+// ─────────────────────────────────────────
+//  GetTransaction
+// ─────────────────────────────────────────
+
+message GetTransactionRequest {
+  string transaction_id = 1;
+}
+
+message GetTransactionResponse {
+  string transaction_id = 1;
+  string sender_id      = 2;
+  string receiver_id    = 3;
+  double amount         = 4;
+  string currency       = 5;
+  string status         = 6;
+  string note           = 7;
+  string created_at     = 8;
+}
+
+// ─────────────────────────────────────────
+//  GetBalance
+// ─────────────────────────────────────────
+
+message GetBalanceRequest {
+  string user_id = 1;
+}
+
+message GetBalanceResponse {
+  string user_id  = 1;
+  double balance  = 2;
+  string currency = 3;
+}

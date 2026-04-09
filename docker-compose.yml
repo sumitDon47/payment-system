@@ -1,6 +1,7 @@
 version: "3.9"
 
 services:
+
   postgres:
     image: postgres:15-alpine
     environment:
@@ -29,6 +30,21 @@ services:
       DB_PASSWORD: yourpassword
       DB_NAME: payment_db
       JWT_SECRET: change-this-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "9090:9090"
+    environment:
+      GRPC_PORT: 9090
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: yourpassword
+      DB_NAME: payment_db
     depends_on:
       postgres:
         condition: service_healthy
