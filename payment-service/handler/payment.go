@@ -38,7 +38,7 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 	if req.Amount <= 0 {
 		return nil, fmt.Errorf("amount must be greater than zero")
 	}
-	if req.Amount > 1_000_000 {
+	if req.Amount > 1000000 {
 		return nil, fmt.Errorf("amount exceeds single-transaction limit")
 	}
 
@@ -66,11 +66,11 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	// Always rollback if we return early with an error
+	// Always rollback if we return early with an err
 	defer func() {
 		if err != nil {
 			tx.Rollback()
-			log.Printf("⚠️  Transaction rolled back: %v", err)
+			log.Printf("Transaction rolled back: %v", err)
 		}
 	}()
 
