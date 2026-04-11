@@ -114,7 +114,7 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 		return nil, fmt.Errorf("failed to debit sender: %w", err)
 	}
 
-	// ── Step 7: Credit receiver ──────────────────────────────────────────────
+	// ── Step 7: Credit receiver ────────────────────────────────────────────
 	_, err = tx.ExecContext(ctx,
 		`UPDATE users SET balance = balance + $1, updated_at = NOW() WHERE id = $2`,
 		req.Amount, req.ReceiverID,
