@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/yourname/payment-system/payment-service/db"
-	"github.com/yourname/payment-system/payment-service/handler"
-	pb "github.com/yourname/payment-system/payment-service/proto"
+	"github.com/sumitDon47/payment-system/payment-service/db"
+	"github.com/sumitDon47/payment-system/payment-service/handler"
+	pb "github.com/sumitDon47/payment-system/payment-service/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection" // allows tools like grpcurl to inspect your service
 )

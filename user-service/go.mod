@@ -1,4 +1,4 @@
-module github.com/yourname/payment-system/user-service
+module github.com/sumitDon47/payment-system/user-service
 
 go 1.25.0
 

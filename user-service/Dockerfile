@@ -1,10 +1,8 @@
-# Build stage
 FROM golang:1.25-alpine AS builder
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
+COPY go.mod ./
 COPY . .
-RUN go build -o user-service .
+RUN go mod tidy && go build -o user-service .
 
 # Final stage — tiny image
 FROM alpine:latest

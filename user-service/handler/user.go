@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/yourname/payment-system/user-service/db"
-	"github.com/yourname/payment-system/user-service/models"
-	"github.com/yourname/payment-system/user-service/utils"
+	"github.com/sumitDon47/payment-system/user-service/db"
+	"github.com/sumitDon47/payment-system/user-service/models"
+	"github.com/sumitDon47/payment-system/user-service/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 

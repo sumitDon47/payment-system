@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/yourname/payment-system/user-service/models"
-	"github.com/yourname/payment-system/user-service/utils"
+	"github.com/sumitDon47/payment-system/user-service/models"
+	"github.com/sumitDon47/payment-system/user-service/utils"
 )
 
 // AuthMiddleware protects routes that require a valid JWT

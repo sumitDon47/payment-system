@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/yourname/payment-system/user-service/db"
-	"github.com/yourname/payment-system/user-service/handler"
-	"github.com/yourname/payment-system/user-service/middleware"
+	"github.com/sumitDon47/payment-system/user-service/db"
+	"github.com/sumitDon47/payment-system/user-service/handler"
+	"github.com/sumitDon47/payment-system/user-service/middleware"
 )
 
 func main() {

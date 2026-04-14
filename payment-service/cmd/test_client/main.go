@@ -9,7 +9,7 @@ import (
 	"log"
 	"time"
 
-	pb "github.com/yourname/payment-system/payment-service/proto"
+	pb "github.com/sumitDon47/payment-system/payment-service/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
