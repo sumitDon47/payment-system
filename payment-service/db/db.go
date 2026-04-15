@@ -11,14 +11,22 @@ import (
 
 var DB *sql.DB
 
+func envOrDefault(key, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
 func Connect() {
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
+		envOrDefault("DB_HOST", "localhost"),
+		envOrDefault("DB_PORT", "5432"),
+		envOrDefault("DB_USER", "postgres"),
+		envOrDefault("DB_PASSWORD", "yourpassword"),
+		envOrDefault("DB_NAME", "payment_db"),
 	)
 
 	var err error
@@ -28,7 +36,8 @@ func Connect() {
 	}
 
 	if err = DB.Ping(); err != nil {
-		log.Fatalf("DB not reachable:%v", err)
+		log.Printf("Payment DB not reachable yet, starting gRPC server without migrations: %v", err)
+		return
 	}
 
 	log.Println("Payment service DB connected")
@@ -39,6 +48,8 @@ func runMigrations() {
 	// Share the users table from user-service (same DB, different service)
 	// Add transactions table for this service
 	query := `
+	CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 	CREATE TABLE IF NOT EXISTS users (
 		id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 		name      VARCHAR(100) NOT NULL,
@@ -59,6 +70,11 @@ func runMigrations() {
 		note        TEXT DEFAULT '',
 		created_at  TIMESTAMP DEFAULT NOW()
 	);
+
+	ALTER TABLE transactions ADD COLUMN IF NOT EXISTS currency   VARCHAR(10) NOT NULL DEFAULT 'NPR';
+	ALTER TABLE transactions ADD COLUMN IF NOT EXISTS status     VARCHAR(20) NOT NULL DEFAULT 'pending';
+	ALTER TABLE transactions ADD COLUMN IF NOT EXISTS note       TEXT DEFAULT '';
+	ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
 
 	CREATE INDEX IF NOT EXISTS idx_txn_sender   ON transactions(sender_id);
 	CREATE INDEX IF NOT EXISTS idx_txn_receiver ON transactions(receiver_id);
