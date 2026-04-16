@@ -71,14 +71,35 @@ func runMigrations() {
 		created_at  TIMESTAMP DEFAULT NOW()
 	);
 
+	CREATE TABLE IF NOT EXISTS outbox_events (
+		id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		topic        VARCHAR(100) NOT NULL,
+		event_key    VARCHAR(100) NOT NULL,
+		payload      JSONB NOT NULL,
+		status       VARCHAR(20) NOT NULL DEFAULT 'pending',
+		retry_count  INT NOT NULL DEFAULT 0,
+		created_at   TIMESTAMP DEFAULT NOW(),
+		published_at TIMESTAMP
+	);
+
 	ALTER TABLE transactions ADD COLUMN IF NOT EXISTS currency   VARCHAR(10) NOT NULL DEFAULT 'NPR';
 	ALTER TABLE transactions ADD COLUMN IF NOT EXISTS status     VARCHAR(20) NOT NULL DEFAULT 'pending';
 	ALTER TABLE transactions ADD COLUMN IF NOT EXISTS note       TEXT DEFAULT '';
 	ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
 
+	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS topic        VARCHAR(100) NOT NULL DEFAULT 'payment.completed';
+	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS event_key    VARCHAR(100) NOT NULL DEFAULT '';
+	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS payload      JSONB NOT NULL DEFAULT '{}'::jsonb;
+	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS status       VARCHAR(20) NOT NULL DEFAULT 'pending';
+	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS retry_count  INT NOT NULL DEFAULT 0;
+	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS created_at   TIMESTAMP DEFAULT NOW();
+	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS published_at TIMESTAMP;
+
 	CREATE INDEX IF NOT EXISTS idx_txn_sender   ON transactions(sender_id);
 	CREATE INDEX IF NOT EXISTS idx_txn_receiver ON transactions(receiver_id);
 	CREATE INDEX IF NOT EXISTS idx_txn_status   ON transactions(status);
+	CREATE INDEX IF NOT EXISTS idx_outbox_status_created ON outbox_events(status, created_at);
+	CREATE UNIQUE INDEX IF NOT EXISTS uq_outbox_topic_key ON outbox_events(topic, event_key);
 	`
 
 	if _, err := DB.Exec(query); err != nil {

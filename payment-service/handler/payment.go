@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -72,6 +73,7 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 	if senderBalance < req.Amount {
 		return nil, fmt.Errorf("insufficient funds: have %.2f, need %.2f", senderBalance, req.Amount)
 	}
+	newSenderBalance := senderBalance - req.Amount
 
 	var txnID string
 	err = tx.QueryRowContext(ctx,
@@ -106,6 +108,35 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update transaction status: %w", err)
+	}
+
+	event := model.PaymentEvent{
+		EventType:     model.TopicPaymentCompleted,
+		TransactionID: txnID,
+		SenderID:      req.SenderID,
+		ReceiverID:    req.ReceiverID,
+		Amount:        req.Amount,
+		Currency:      currency,
+		Note:          req.Note,
+		SenderBalance: newSenderBalance,
+		OccurredAt:    time.Now().UTC().Format(time.RFC3339),
+	}
+
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode outbox event: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO outbox_events (topic, event_key, payload, status)
+		 VALUES ($1, $2, $3::jsonb, $4)`,
+		model.TopicPaymentCompleted,
+		txnID,
+		string(payload),
+		model.OutboxStatusPending,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to enqueue outbox event: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
