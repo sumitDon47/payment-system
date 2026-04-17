@@ -165,7 +165,9 @@ go run main.go
 
 ## Documentation
 
-Comprehensive API documentation and guides for integrating with the Payment System:
+Comprehensive documentation for integrating, deploying, and maintaining the Payment System:
+
+### API Documentation
 
 | Document | Purpose |
 |----------|---------|
@@ -173,7 +175,19 @@ Comprehensive API documentation and guides for integrating with the Payment Syst
 | [Complete API Guide](./API.md) | Full integration guide covering both services, workflows, client examples |
 | [gRPC API Documentation](./GRPC_API.md) | Detailed gRPC methods, validation rules, error codes, testing with grpcurl |
 | [OpenAPI Specification](./openapi.yaml) | REST API specification — import into Postman or Swagger UI |
+
+### Deployment & Operations
+
+| Document | Purpose |
+|----------|---------|
+| [CI/CD Pipeline](./CI_CD.md) | **Recommended reading** — GitHub Actions workflows, automated testing, Docker builds |
+| [Deployment Guide](./DEPLOYMENT.md) | Step-by-step deployment procedures (automatic, manual, rollback, recovery) |
 | [Rate Limiting](./RATE_LIMITING.md) | Rate limit configuration (5 req/min auth, 100 req/min API, 100 req/sec gRPC) |
+
+### Configuration
+
+| Document | Purpose |
+|----------|---------|
 | [Email Setup](./EMAIL_SETUP.md) | SendGrid integration for payment notifications |
 | [README.md](./README.md) | This file — architecture overview and getting started |
 
