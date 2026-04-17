@@ -78,6 +78,7 @@ func runMigrations() {
 		payload      JSONB NOT NULL,
 		status       VARCHAR(20) NOT NULL DEFAULT 'pending',
 		retry_count  INT NOT NULL DEFAULT 0,
+		last_error   TEXT,
 		created_at   TIMESTAMP DEFAULT NOW(),
 		published_at TIMESTAMP
 	);
@@ -92,6 +93,7 @@ func runMigrations() {
 	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS payload      JSONB NOT NULL DEFAULT '{}'::jsonb;
 	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS status       VARCHAR(20) NOT NULL DEFAULT 'pending';
 	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS retry_count  INT NOT NULL DEFAULT 0;
+	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS last_error   TEXT;
 	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS created_at   TIMESTAMP DEFAULT NOW();
 	ALTER TABLE outbox_events ADD COLUMN IF NOT EXISTS published_at TIMESTAMP;
 

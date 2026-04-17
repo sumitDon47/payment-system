@@ -15,6 +15,10 @@ type PaymentEvent struct {
 }
 
 const (
-	TopicPaymentCompleted = "payment.completed"
-	OutboxStatusPending   = "pending"
+	TopicPaymentCompleted  = "payment.completed"
+	TopicPaymentDLQ        = "payment.deadletter"
+	OutboxStatusPending    = "pending"
+	OutboxStatusProcessing = "processing"
+	OutboxStatusPublished  = "published"
+	OutboxStatusDead       = "dead"
 )

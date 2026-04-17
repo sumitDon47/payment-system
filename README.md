@@ -298,6 +298,27 @@ go run main.go
 
 ---
 
+## Outbox admin helper (dead-event replay)
+
+Use this helper when outbox events are moved to `dead` after max retries.
+
+```bash
+cd payment-service
+
+# List latest dead events
+go run ./cmd/outbox_admin list-dead --limit 10
+
+# Replay one dead event by outbox ID
+go run ./cmd/outbox_admin replay --id <outbox-event-id>
+
+# Replay all dead events
+go run ./cmd/outbox_admin replay --all
+```
+
+Replay sets event status back to `pending` and resets retry metadata so the dispatcher can publish again.
+
+---
+
 ## License
 
 MIT
