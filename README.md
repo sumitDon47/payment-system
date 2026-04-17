@@ -163,6 +163,56 @@ go run main.go
 
 ---
 
+## Documentation
+
+Comprehensive API documentation and guides for integrating with the Payment System:
+
+| Document | Purpose |
+|----------|---------|
+| [API Quick Reference](./API_QUICK_REFERENCE.md) | **Start here** — Common endpoints, errors, examples, quick curl commands |
+| [Complete API Guide](./API.md) | Full integration guide covering both services, workflows, client examples |
+| [gRPC API Documentation](./GRPC_API.md) | Detailed gRPC methods, validation rules, error codes, testing with grpcurl |
+| [OpenAPI Specification](./openapi.yaml) | REST API specification — import into Postman or Swagger UI |
+| [Rate Limiting](./RATE_LIMITING.md) | Rate limit configuration (5 req/min auth, 100 req/min API, 100 req/sec gRPC) |
+| [Email Setup](./EMAIL_SETUP.md) | SendGrid integration for payment notifications |
+| [README.md](./README.md) | This file — architecture overview and getting started |
+
+### Example Workflows
+
+**Complete payment flow (curl + grpcurl):**
+
+```bash
+# 1. Register
+REGISTER=$(curl -X POST http://localhost:8080/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Alice",
+    "email": "alice@example.com",
+    "password": "SecurePass123!"
+  }')
+ALICE_ID=$(echo $REGISTER | jq -r '.id')
+
+# 2. Login (get JWT)
+LOGIN=$(curl -X POST http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@example.com","password":"SecurePass123!"}')
+TOKEN=$(echo $LOGIN | jq -r '.token')
+
+# 3. Check wallet
+curl http://localhost:8080/wallet \
+  -H "Authorization: Bearer $TOKEN"
+
+# 4. Send payment (gRPC)
+grpcurl -d "{
+  \"sender_id\": \"$ALICE_ID\",
+  \"receiver_id\": \"bob-001\",
+  \"amount\": 100.50,
+  \"currency\": \"NPR\"
+}" -plaintext localhost:9090 payment.PaymentService/SendPayment
+```
+
+---
+
 ## API reference
 
 ### User Service — HTTP (port 8080)

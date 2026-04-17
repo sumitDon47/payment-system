@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sumitDon47/payment-system/payment-service/db"
 	"github.com/sumitDon47/payment-system/payment-service/handler"
+	"github.com/sumitDon47/payment-system/payment-service/middleware"
 	model "github.com/sumitDon47/payment-system/payment-service/models"
 	"github.com/sumitDon47/payment-system/payment-service/outbox"
 	pb "github.com/sumitDon47/payment-system/payment-service/proto"
@@ -41,9 +42,13 @@ func main() {
 		log.Fatalf("❌ Failed to listen: %v", err)
 	}
 
-	// Create the gRPC server with logging interceptor
+	// Create the gRPC server with logging and rate limiting interceptors
+	rateLimiterInterceptor := middleware.NewRateLimiterInterceptor()
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(loggingInterceptor),
+		grpc.ChainUnaryInterceptor(
+			loggingInterceptor,
+			middleware.UnaryServerInterceptor(rateLimiterInterceptor),
+		),
 	)
 
 	// Register our PaymentService implementation

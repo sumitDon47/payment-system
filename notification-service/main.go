@@ -8,14 +8,14 @@ import (
 	"syscall"
 
 	"github.com/joho/godotenv"
-	"github.com/yourname/payment-system/notification-service/consumer"
+	"github.com/sumitDon47/payment-system/notification-service/consumer"
 )
 
 func main() {
 	_ = godotenv.Load()
 
-	broker  := getEnv("KAFKA_BROKER",   "kafka:9092")
-	topic   := getEnv("KAFKA_TOPIC",    "payment.completed")
+	broker := getEnv("KAFKA_BROKER", "kafka:9092")
+	topic := getEnv("KAFKA_TOPIC", "payment.completed")
 	groupID := getEnv("KAFKA_GROUP_ID", "notification-service")
 
 	log.Printf("🚀 Notification Service starting")

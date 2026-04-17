@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
-	"github.com/yourname/payment-system/notification-service/handler"
-	"github.com/yourname/payment-system/notification-service/models"
+	"github.com/sumitDon47/payment-system/notification-service/handler"
+	"github.com/sumitDon47/payment-system/notification-service/models"
 )
 
 // Consumer holds the Kafka reader and processes messages.

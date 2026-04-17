@@ -1,0 +1,470 @@
+openapi: 3.0.0
+info:
+  title: Payment System APIs
+  description: |
+    Complete API documentation for the Payment System microservices architecture.
+    
+    The system consists of three services:
+    - **User Service** (HTTP REST) - Authentication and user management
+    - **Payment Service** (gRPC) - Payment processing and transactions
+    - **Notification Service** (Internal) - Email notifications via Kafka
+  version: 1.0.0
+  contact:
+    name: Payment System Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: User Service (Development)
+  - url: http://localhost:9090
+    description: Payment Service gRPC (Development)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /login endpoint
+
+  schemas:
+    # ─────────────────────────────────────────
+    # User Service Request/Response Models
+    # ─────────────────────────────────────────
+    
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: "John Doe"
+          minLength: 1
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "SecurePass123!"
+
+    RegisterResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          example: "john@example.com"
+        name:
+          type: string
+          example: "John Doe"
+        balance:
+          type: number
+          format: double
+          example: 0.00
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-04-17T10:30:00Z"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          example: "SecurePass123!"
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expires_in:
+          type: integer
+          example: 3600
+          description: Token expiration in seconds (1 hour)
+        user_id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          example: "john@example.com"
+        balance:
+          type: number
+          format: double
+          example: 1000.50
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-04-17T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-04-17T11:45:00Z"
+
+    WalletBalance:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        balance:
+          type: number
+          format: double
+          example: 1000.50
+        currency:
+          type: string
+          example: "NPR"
+
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        service:
+          type: string
+          example: "user-service"
+        redis:
+          type: string
+          enum: [ok, disabled, unavailable]
+          example: "ok"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "invalid request body"
+
+    # ─────────────────────────────────────────
+    # Payment Service Models (for reference)
+    # ─────────────────────────────────────────
+    
+    SendPaymentRequest:
+      type: object
+      required:
+        - sender_id
+        - receiver_id
+        - amount
+      properties:
+        sender_id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        receiver_id:
+          type: string
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          example: 100.50
+        currency:
+          type: string
+          default: "NPR"
+          example: "NPR"
+        note:
+          type: string
+          example: "Payment for services"
+
+    SendPaymentResponse:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+          example: "txn_123456789"
+        status:
+          type: string
+          enum: [completed, failed, pending]
+          example: "completed"
+        sender_balance:
+          type: number
+          format: double
+          example: 899.50
+        message:
+          type: string
+          example: "Payment successful"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-04-17T10:30:00Z"
+
+    Transaction:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+          example: "txn_123456789"
+        sender_id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        receiver_id:
+          type: string
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        amount:
+          type: number
+          format: double
+          example: 100.50
+        currency:
+          type: string
+          example: "NPR"
+        status:
+          type: string
+          enum: [completed, failed, pending]
+          example: "completed"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-04-17T10:30:00Z"
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Check if the User Service is running and dependencies are available
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+
+  /register:
+    post:
+      summary: Register New User
+      description: |
+        Create a new user account in the system.
+        
+        **Rate Limit**: 5 requests/minute per IP
+        
+        **Requirements**:
+        - Password must be at least 8 characters
+        - Email must be unique
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Invalid request (missing fields, password too short, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded (5 requests/minute)
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+
+  /login:
+    post:
+      summary: User Login
+      description: |
+        Authenticate user and obtain JWT token.
+        
+        **Rate Limit**: 5 requests/minute per IP
+        
+        **Token Details**:
+        - Expires in 1 hour
+        - Algorithm: HS256
+        - Include in subsequent requests via `Authorization: Bearer <token>`
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Missing credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded (5 requests/minute)
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+
+  /profile:
+    get:
+      summary: Get User Profile
+      description: |
+        Retrieve the authenticated user's profile information.
+        
+        **Rate Limit**: 100 requests/minute per IP
+        
+        **Authentication**: Required - Include JWT token in Authorization header
+      tags:
+        - User
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Missing or invalid JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded (100 requests/minute)
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+
+  /wallet:
+    get:
+      summary: Get Wallet Balance
+      description: |
+        Retrieve the authenticated user's wallet balance.
+        
+        **Rate Limit**: 100 requests/minute per IP
+        
+        **Authentication**: Required - Include JWT token in Authorization header
+        
+        **Cache**: Results cached for 5 minutes in Redis (if available)
+      tags:
+        - Wallet
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Wallet balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletBalance'
+        '401':
+          description: Missing or invalid JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded (100 requests/minute)
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+
+  /internal/cache/invalidate:
+    post:
+      summary: Invalidate User Cache (Internal)
+      description: |
+        Internal endpoint called by Payment Service to invalidate user wallet cache after transactions.
+        
+        **Authorization**: Internal network only (not exposed to public)
+        
+        **Query Parameters**:
+        - `user_id`: UUID of the user whose cache should be invalidated
+      tags:
+        - Internal
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Cache invalidated successfully
+        '400':
+          description: Missing user_id parameter
+
+tags:
+  - name: Health
+    description: Service health and status endpoints
+  - name: Authentication
+    description: User registration and login
+  - name: User
+    description: User profile and account information
+  - name: Wallet
+    description: Wallet and balance management
+  - name: Internal
+    description: Internal service-to-service endpoints

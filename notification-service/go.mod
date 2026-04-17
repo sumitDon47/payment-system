@@ -1,4 +1,4 @@
-module github.com/yourname/payment-system/notification-service
+module github.com/sumitDon47/payment-system/notification-service
 
 go 1.21
 

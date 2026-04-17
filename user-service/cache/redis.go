@@ -87,13 +87,13 @@ func (c *Client) GetBalance(ctx context.Context, userID string) (float64, bool) 
 		return 0, false
 	}
 	if err != nil {
-		log.Printf("⚠️  Redis GET error for %s: %v", key, err)
+		log.Printf("Redis GET error for %s: %v", key, err)
 		return 0, false
 	}
 
 	balance, err := strconv.ParseFloat(val, 64)
 	if err != nil {
-		log.Printf("⚠️  Redis parse error for %s: %v", key, err)
+		log.Printf("Redis parse error for %s: %v", key, err)
 		return 0, false
 	}
 

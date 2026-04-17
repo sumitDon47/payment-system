@@ -35,12 +35,14 @@ func main() {
 
 	// Public routes
 	mux.HandleFunc("/health", handler.HealthCheck)
-	mux.HandleFunc("/register", handler.Register)
-	mux.HandleFunc("/login", handler.Login)
 
-	// Protected routes
-	mux.HandleFunc("/profile", middleware.AuthMiddleware(handler.GetProfile))
-	mux.HandleFunc("/wallet", middleware.AuthMiddleware(handler.GetWalletBalance))
+	// Auth endpoints with rate limiting (5 requests/minute per IP)
+	mux.HandleFunc("/register", middleware.LimitAuth(handler.Register))
+	mux.HandleFunc("/login", middleware.LimitAuth(handler.Login))
+
+	// Protected routes with rate limiting (100 requests/minute per IP)
+	mux.HandleFunc("/profile", middleware.AuthMiddleware(middleware.LimitApi(handler.GetProfile)))
+	mux.HandleFunc("/wallet", middleware.AuthMiddleware(middleware.LimitApi(handler.GetWalletBalance)))
 
 	// Internal route — cache invalidation called by payment-service
 	// In production this would be behind internal network only
