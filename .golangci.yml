@@ -1,0 +1,37 @@
+# .golangci.yml
+# Lint configuration for all three services
+# Place this file in the root of each service folder
+
+run:
+  timeout: 5m
+  go: '1.25'
+
+linters:
+  enable:
+    - errcheck        # checks that errors are handled
+    - gosimple        # simplification suggestions
+    - govet           # reports suspicious constructs
+    - ineffassign     # detects unused assignments
+    - staticcheck     # advanced static analysis
+    - unused          # checks for unused code
+    - gofmt           # checks formatting
+    - goimports       # checks import ordering
+
+  disable:
+    - exhaustruct     # too strict for our use case
+    - wrapcheck       # we handle error wrapping manually
+
+linters-settings:
+  errcheck:
+    # These functions are safe to ignore errors on
+    exclude-functions:
+      - (net/http.ResponseWriter).Write
+      - (*database/sql.Rows).Close
+
+issues:
+  exclude-rules:
+    # Don't lint test files as strictly
+    - path: _test\.go
+      linters:
+        - errcheck
+        - ineffassign
