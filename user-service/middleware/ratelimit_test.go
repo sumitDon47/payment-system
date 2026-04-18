@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,7 +32,8 @@ func TestGetClientIP_XForwardedFor(t *testing.T) {
 func TestRateLimiter_Allow(t *testing.T) {
 	limiter := NewRateLimiter()
 
-	ip := "192.168.1.100"
+	// Use unique IP to avoid conflict with other tests
+	ip := fmt.Sprintf("192.168.1.%d", time.Now().UnixNano()%256)
 
 	// First request should be allowed (initial burst)
 	if !limiter.Allow(ip) {
@@ -62,8 +64,9 @@ func TestRateLimiter_Allow(t *testing.T) {
 func TestRateLimiter_PerIP(t *testing.T) {
 	limiter := NewRateLimiter()
 
-	ip1 := "192.168.1.100"
-	ip2 := "192.168.1.101"
+	// Use unique IPs to avoid conflict with other tests
+	ip1 := fmt.Sprintf("192.168.2.%d", time.Now().UnixNano()%256)
+	ip2 := fmt.Sprintf("192.168.3.%d", (time.Now().UnixNano()+1)%256)
 
 	// Both IPs should be able to make requests independently
 	if !limiter.Allow(ip1) {
@@ -84,7 +87,8 @@ func TestRateLimiter_PerIP(t *testing.T) {
 
 func TestAuthLimiter_StrictLimit(t *testing.T) {
 	limiter := NewAuthLimiter()
-	ip := "192.168.1.100"
+	// Use unique IP to avoid conflict
+	ip := fmt.Sprintf("192.168.4.%d", time.Now().UnixNano()%256)
 
 	// Auth limiter: 5 requests per minute
 	// Should allow 1 immediately (burst)
@@ -110,7 +114,8 @@ func TestAuthLimiter_StrictLimit(t *testing.T) {
 
 func TestApiLimiter_HigherLimit(t *testing.T) {
 	limiter := NewApiLimiter()
-	ip := "192.168.1.100"
+	// Use unique IP to avoid conflict
+	ip := fmt.Sprintf("192.168.5.%d", time.Now().UnixNano()%256)
 
 	// API limiter: 100 requests per minute ≈ 1.67/sec
 	allowed := 0
@@ -139,7 +144,8 @@ func TestLimitAuth_RateLimitExceeded(t *testing.T) {
 
 	limitedHandler := LimitAuth(handler)
 
-	ip := "192.168.1.100"
+	// Use unique IP to avoid conflict
+	ip := fmt.Sprintf("192.168.6.%d", time.Now().UnixNano()%256)
 	req := httptest.NewRequest("POST", "/register", nil)
 	req.RemoteAddr = ip + ":54321"
 
