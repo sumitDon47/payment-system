@@ -313,6 +313,7 @@ grpcurl -plaintext \
   localhost:9090 payment.PaymentService/GetBalance
 ```
 
+
 ---
 
 ## Key engineering concepts demonstrated
