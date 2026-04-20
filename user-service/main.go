@@ -10,10 +10,15 @@ import (
 	"github.com/sumitDon47/payment-system/user-service/db"
 	"github.com/sumitDon47/payment-system/user-service/handler"
 	"github.com/sumitDon47/payment-system/user-service/middleware"
+	"github.com/sumitDon47/payment-system/user-service/utils"
 )
 
 func main() {
 	_ = godotenv.Load()
+
+	if err := utils.EnsureJWTConfigured(); err != nil {
+		log.Fatalf("❌ JWT configuration error: %v", err)
+	}
 
 	// Connect to PostgreSQL
 	db.Connect()
@@ -48,7 +53,7 @@ func main() {
 	// In production this would be behind internal network only
 	mux.HandleFunc("/internal/cache/invalidate", handler.InvalidateUserCache)
 
-	server := middleware.CORSMiddleware(mux)
+	server := middleware.SecurityHeadersMiddleware(middleware.CORSMiddleware(mux))
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -9,10 +9,13 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/sumitDon47/payment-system/notification-service/consumer"
+	"github.com/sumitDon47/payment-system/notification-service/db"
 )
 
 func main() {
 	_ = godotenv.Load()
+
+	db.Connect()
 
 	broker := getEnv("KAFKA_BROKER", "kafka:9092")
 	topic := getEnv("KAFKA_TOPIC", "payment.completed")

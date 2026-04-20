@@ -2,10 +2,13 @@ package handler
 
 import (
 	"context"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -239,6 +242,26 @@ func GetWalletBalance(w http.ResponseWriter, r *http.Request) {
 // This endpoint is internal — not exposed to the public.
 func InvalidateUserCache(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "method not allowed"})
+		return
+	}
+
+	apiKey := strings.TrimSpace(os.Getenv("INTERNAL_API_KEY"))
+	if apiKey == "" {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "internal endpoint not configured"})
+		return
+	}
+
+	providedKey := strings.TrimSpace(r.Header.Get("X-Internal-API-Key"))
+	if subtle.ConstantTimeCompare([]byte(providedKey), []byte(apiKey)) != 1 {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "unauthorized"})
+		return
+	}
 
 	if Cache == nil {
 		json.NewEncoder(w).Encode(map[string]string{"status": "cache disabled"})

@@ -7,5 +7,8 @@ RUN go build -o notification-service .
 
 FROM alpine:latest
 WORKDIR /app
+RUN apk add --no-cache ca-certificates && addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=builder /app/notification-service .
+RUN chown appuser:appgroup /app/notification-service
+USER appuser
 CMD ["./notification-service"]

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/sumitDon47/payment-system/notification-service/db"
 	"github.com/sumitDon47/payment-system/notification-service/email"
 	"github.com/sumitDon47/payment-system/notification-service/models"
 )
@@ -50,41 +51,64 @@ func HandlePaymentFailed(event models.PaymentEvent) error {
 // ─────────────────────────────────────────────────────────────────────────────
 
 func notifySender(event models.PaymentEvent) error {
+	// Fetch real sender and receiver info from DB
+	senderName, senderEmail, err := db.GetUserInfo(event.SenderID)
+	if err != nil {
+		log.Printf("  ⚠️ [EMAIL] Could not fetch sender info for %s: %v", event.SenderID, err)
+		senderName = "Valued Customer"
+		senderEmail = fmt.Sprintf("sender-%s@example.com", event.SenderID)
+	}
+
+	receiverName, _, err := db.GetUserInfo(event.ReceiverID)
+	if err != nil {
+		log.Printf("  ⚠️ [EMAIL] Could not fetch receiver info for %s: %v", event.ReceiverID, err)
+		receiverName = "Unknown Receiver"
+	}
+
 	// Generate HTML email body
 	htmlBody := email.PaymentCompletedHTML(
 		event.Amount,
 		event.Currency,
-		event.ReceiverID, // In a real system, would fetch receiver name from DB
+		receiverName,
 		event.TransactionID,
 		event.SenderBalance,
 	)
 
-	// Note: In production, you'd fetch the actual sender name and email from the user service
-	// For now, we use the user ID as a placeholder
 	subject := fmt.Sprintf("Payment Confirmation: %.2f %s sent", event.Amount, event.Currency)
 
 	// Send via SendGrid
-	// TODO: Get actual sender email from user service
 	if err := emailClient.SendEmail(
-		fmt.Sprintf("sender-%s@example.com", event.SenderID), // placeholder
-		"",
+		senderEmail,
+		senderName,
 		subject,
 		htmlBody,
 	); err != nil {
-		log.Printf("  ❌ [EMAIL] Failed to send to sender %s: %v", event.SenderID, err)
-		// Don't fail the whole operation if email fails
-		// In production, this would go to a retry queue
+		log.Printf("  ❌ [EMAIL] Failed to send to sender %s (%s): %v", event.SenderID, senderEmail, err)
 		return nil
 	}
 
-	log.Printf("  ✅ [EMAIL] Sent to sender %s", event.SenderID)
+	log.Printf("  ✅ [EMAIL] Sent to sender %s (%s)", event.SenderID, senderEmail)
 	return nil
 }
 
 func notifyReceiver(event models.PaymentEvent) error {
+	// Fetch real receiver and sender info from DB
+	receiverName, receiverEmail, err := db.GetUserInfo(event.ReceiverID)
+	if err != nil {
+		log.Printf("  ⚠️ [EMAIL] Could not fetch receiver info for %s: %v", event.ReceiverID, err)
+		receiverName = "Valued Customer"
+		receiverEmail = fmt.Sprintf("receiver-%s@example.com", event.ReceiverID)
+	}
+
+	senderName, _, err := db.GetUserInfo(event.SenderID)
+	if err != nil {
+		log.Printf("  ⚠️ [EMAIL] Could not fetch sender info for %s: %v", event.SenderID, err)
+		senderName = "Unknown Sender"
+	}
+
 	// Generate HTML email body
 	htmlBody := email.PaymentReceivedHTML(
-		event.SenderID, // In a real system, would fetch sender name from DB
+		senderName,
 		event.Amount,
 		event.Currency,
 		event.TransactionID,
@@ -93,23 +117,28 @@ func notifyReceiver(event models.PaymentEvent) error {
 	subject := fmt.Sprintf("Payment Received: +%.2f %s", event.Amount, event.Currency)
 
 	// Send via SendGrid
-	// TODO: Get actual receiver email from user service
 	if err := emailClient.SendEmail(
-		fmt.Sprintf("receiver-%s@example.com", event.ReceiverID), // placeholder
-		"",
+		receiverEmail,
+		receiverName,
 		subject,
 		htmlBody,
 	); err != nil {
-		log.Printf("  ❌ [EMAIL] Failed to send to receiver %s: %v", event.ReceiverID, err)
-		// Don't fail the whole operation if email fails
+		log.Printf("  ❌ [EMAIL] Failed to send to receiver %s (%s): %v", event.ReceiverID, receiverEmail, err)
 		return nil
 	}
 
-	log.Printf("  ✅ [EMAIL] Sent to receiver %s", event.ReceiverID)
+	log.Printf("  ✅ [EMAIL] Sent to receiver %s (%s)", event.ReceiverID, receiverEmail)
 	return nil
 }
 
 func notifyFailure(event models.PaymentEvent) error {
+	senderName, senderEmail, err := db.GetUserInfo(event.SenderID)
+	if err != nil {
+		log.Printf("  ⚠️ [EMAIL] Could not fetch sender info for %s: %v", event.SenderID, err)
+		senderName = "Valued Customer"
+		senderEmail = fmt.Sprintf("sender-%s@example.com", event.SenderID)
+	}
+
 	// Generate HTML email body
 	htmlBody := email.PaymentFailedHTML(
 		event.Amount,
@@ -121,18 +150,17 @@ func notifyFailure(event models.PaymentEvent) error {
 	subject := fmt.Sprintf("Payment Failed: %.2f %s", event.Amount, event.Currency)
 
 	// Send via SendGrid
-	// TODO: Get actual sender email from user service
 	if err := emailClient.SendEmail(
-		fmt.Sprintf("sender-%s@example.com", event.SenderID), // placeholder
-		"",
+		senderEmail,
+		senderName,
 		subject,
 		htmlBody,
 	); err != nil {
-		log.Printf("  ❌ [EMAIL] Failed to send failure notification to sender %s: %v", event.SenderID, err)
+		log.Printf("  ❌ [EMAIL] Failed to send failure notification to sender %s (%s): %v", event.SenderID, senderEmail, err)
 		// Don't fail the whole operation if email fails
 		return nil
 	}
 
-	log.Printf("  ✅ [EMAIL] Sent failure notification to sender %s", event.SenderID)
+	log.Printf("  ✅ [EMAIL] Sent failure notification to sender %s (%s)", event.SenderID, senderEmail)
 	return nil
 }

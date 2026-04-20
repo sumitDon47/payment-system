@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/joho/godotenv"
@@ -54,8 +55,10 @@ func main() {
 	// Register our PaymentService implementation
 	pb.RegisterPaymentServiceServer(grpcServer, &handler.Server{})
 
-	// Enable reflection so you can test with grpcurl without proto files
-	reflection.Register(grpcServer)
+	if strings.EqualFold(getEnv("ENABLE_GRPC_REFLECTION", "false"), "true") {
+		reflection.Register(grpcServer)
+		log.Println("gRPC reflection enabled")
+	}
 
 	// Start the outbox dispatcher to publish pending events to Kafka.
 	dispatcher := outbox.NewDispatcher(db.DB, kafkaBroker, kafkaTopic, dlqTopic, maxRetries)
