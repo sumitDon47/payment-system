@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sumitDon47/payment-system/user-service/cache"
 	"github.com/sumitDon47/payment-system/user-service/db"
 	"github.com/sumitDon47/payment-system/user-service/handler"
@@ -52,7 +53,8 @@ func main() {
 	// Internal route — cache invalidation called by payment-service
 	// In production this would be behind internal network only
 	mux.HandleFunc("/internal/cache/invalidate", handler.InvalidateUserCache)
-
+	// Prometheus metrics endpoint
+	mux.Handle("/metrics", promhttp.Handler())
 	server := middleware.SecurityHeadersMiddleware(middleware.CORSMiddleware(mux))
 
 	port := os.Getenv("PORT")

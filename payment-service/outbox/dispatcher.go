@@ -122,13 +122,11 @@ func (d *Dispatcher) dispatchBatch(ctx context.Context) error {
 			topic = model.TopicPaymentCompleted
 		}
 
-		err := d.writer.WriteMessages(ctx, kafka.Message{
-			Topic: topic,
+		if err := d.writer.WriteMessages(ctx, kafka.Message{
 			Key:   []byte(rec.EventKey),
 			Value: rec.Payload,
 			Time:  time.Now().UTC(),
-		})
-		if err != nil {
+		}); err != nil {
 			if handleErr := d.handlePublishFailure(ctx, rec, err); handleErr != nil {
 				log.Printf("Outbox failure handling failed for %s: %v", rec.ID, handleErr)
 			}
@@ -234,7 +232,6 @@ func (d *Dispatcher) publishToDLQ(ctx context.Context, rec outboxRecord, reason 
 	}
 
 	if err := d.dlqWriter.WriteMessages(ctx, kafka.Message{
-		Topic: d.dlqTopic,
 		Key:   []byte(rec.EventKey),
 		Value: dlqPayload,
 		Time:  time.Now().UTC(),

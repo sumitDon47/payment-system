@@ -110,6 +110,7 @@ services:
 
   notification-service:
     build: ./notification-service
+    env_file: ./notification-service/.env
     environment:
       KAFKA_BROKER: kafka:9092
       KAFKA_TOPIC: payment.completed
@@ -124,6 +125,28 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - user-service
+      - payment-service
+      - notification-service
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
 
 volumes:
   pgdata:

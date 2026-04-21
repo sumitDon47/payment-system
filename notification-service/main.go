@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sumitDon47/payment-system/notification-service/consumer"
 	"github.com/sumitDon47/payment-system/notification-service/db"
 )
@@ -44,6 +46,15 @@ func main() {
 	// Start consuming — this blocks until ctx is cancelled
 	// Run in a goroutine so main can wait for the signal below
 	go c.Start(ctx)
+
+	// Start a separate HTTP server for Prometheus metrics
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Printf("📊 Prometheus metrics (HTTP) available on :8082/metrics")
+		if err := http.ListenAndServe(":8082", nil); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("❌ Failed to start metrics server: %v", err)
+		}
+	}()
 
 	// Block here until signal received
 	<-ctx.Done()

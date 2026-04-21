@@ -71,7 +71,7 @@ func (s *SendGridClient) SendEmail(toEmail, toName, subject, htmlBody string) er
 			},
 		},
 		From: Email{
-			Email: "noreply@paymentsystem.com",
+			Email: "sumitsapkota47@gmail.com",
 			Name:  "Payment System",
 		},
 		Subject: subject,

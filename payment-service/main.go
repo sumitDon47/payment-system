@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sumitDon47/payment-system/payment-service/db"
 	"github.com/sumitDon47/payment-system/payment-service/handler"
 	"github.com/sumitDon47/payment-system/payment-service/middleware"
@@ -42,6 +44,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("❌ Failed to listen: %v", err)
 	}
+
+	// Start a separate HTTP server for Prometheus metrics
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Printf("📊 Prometheus metrics (HTTP) available on :8081/metrics")
+		if err := http.ListenAndServe(":8081", nil); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("❌ Failed to start metrics server: %v", err)
+		}
+	}()
 
 	// Create the gRPC server with logging and rate limiting interceptors
 	rateLimiterInterceptor := middleware.NewRateLimiterInterceptor()
