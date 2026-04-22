@@ -1,43 +1,74 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Alert, 
-  KeyboardAvoidingView, 
-  Platform 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import { apiClient } from '../api/axios';
+import { userAPI } from '../api/services';
+import { StorageUtil } from '../api/storage';
+import { useNavigation } from '../navigation/NavigationContext';
 
 export default function LoginScreen() {
+  const { navigate } = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {};
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
     try {
-      // Makes a POST request to your User Service running on port 8080
-      const response = await apiClient.post('/login', { email, password });
-      
-      // Save the JWT Token securely on the device
-      if (response.data.token) {
-        await SecureStore.setItemAsync('jwt_token', response.data.token);
-        Alert.alert('Success', 'Logged in successfully!');
-        
-        // Here you would typically navigate to the main dashboard/wallet screen:
-        // navigation.replace('Home');
+      // Call the login API
+      const response = await userAPI.login(email, password);
+
+      if (response.token) {
+        // Save JWT Token and user info
+        await StorageUtil.setItem('jwt_token', response.token);
+        await StorageUtil.setItem('user_id', response.user.id);
+        await StorageUtil.setItem('user_name', response.user.name);
+        await StorageUtil.setItem('user_email', response.user.email);
+
+        Alert.alert('Success', 'Logged in successfully! 🎉', [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Clear form
+              setEmail('');
+              setPassword('');
+              setErrors({});
+            },
+          },
+        ]);
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Failed to login';
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to login';
+      console.error('Login error:', error);
       Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
@@ -45,7 +76,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       className="flex-1 bg-white justify-center items-center px-6"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
@@ -62,35 +93,55 @@ export default function LoginScreen() {
         <View className="mb-4">
           <Text className="text-gray-700 mb-2 font-medium ml-1">Email Address</Text>
           <TextInput
-            className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-4 text-gray-900 text-lg"
+            className={`w-full bg-gray-50 border rounded-2xl px-4 py-4 text-gray-900 text-lg ${
+              errors.email ? 'border-red-500' : 'border-gray-200'
+            }`}
             placeholder="john@example.com"
             placeholderTextColor="#9ca3af"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (text.trim()) setErrors({ ...errors, email: undefined });
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
+            editable={!loading}
           />
+          {errors.email && (
+            <Text className="text-red-500 text-sm mt-1 ml-1">{errors.email}</Text>
+          )}
         </View>
 
         {/* Password Input */}
-        <View className="mb-8">
+        <View className="mb-6">
           <Text className="text-gray-700 mb-2 font-medium ml-1">Password</Text>
           <TextInput
-            className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-4 text-gray-900 text-lg"
+            className={`w-full bg-gray-50 border rounded-2xl px-4 py-4 text-gray-900 text-lg ${
+              errors.password ? 'border-red-500' : 'border-gray-200'
+            }`}
             placeholder="Enter your password"
             placeholderTextColor="#9ca3af"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (text) setErrors({ ...errors, password: undefined });
+            }}
             secureTextEntry
+            editable={!loading}
           />
-          <TouchableOpacity className="mt-2 items-end">
+          {errors.password && (
+            <Text className="text-red-500 text-sm mt-1 ml-1">{errors.password}</Text>
+          )}
+          <TouchableOpacity className="mt-2 items-end" disabled={loading}>
             <Text className="text-blue-600 font-medium">Forgot password?</Text>
           </TouchableOpacity>
         </View>
 
         {/* Login Button */}
         <TouchableOpacity
-          className={`w-full bg-blue-600 rounded-2xl py-4 items-center flex-row justify-center ${loading ? 'opacity-70' : ''}`}
+          className={`w-full bg-blue-600 rounded-2xl py-4 items-center flex-row justify-center mb-4 ${
+            loading ? 'opacity-70' : ''
+          }`}
           onPress={handleLogin}
           disabled={loading}
         >
@@ -102,10 +153,12 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         {/* Sign Up Link */}
-        <TouchableOpacity className="mt-6 py-2 items-center flex-row justify-center">
+        <View className="flex-row justify-center items-center">
           <Text className="text-gray-600">Don't have an account? </Text>
-          <Text className="text-blue-600 font-bold">Sign up</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigate('signup')} disabled={loading}>
+            <Text className="text-blue-600 font-semibold">Sign up</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );

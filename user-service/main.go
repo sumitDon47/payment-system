@@ -49,6 +49,7 @@ func main() {
 	// Protected routes with rate limiting (100 requests/minute per IP)
 	mux.HandleFunc("/profile", middleware.AuthMiddleware(middleware.LimitApi(handler.GetProfile)))
 	mux.HandleFunc("/wallet", middleware.AuthMiddleware(middleware.LimitApi(handler.GetWalletBalance)))
+	mux.HandleFunc("/transfer", middleware.AuthMiddleware(middleware.LimitApi(handler.Transfer)))
 
 	// Internal route — cache invalidation called by payment-service
 	// In production this would be behind internal network only
