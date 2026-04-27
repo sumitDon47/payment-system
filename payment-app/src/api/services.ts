@@ -62,6 +62,32 @@ export const userAPI = {
     const response = await apiClient.get('/health');
     return response.data;
   },
+
+  /**
+   * Request password reset token
+   * @param email - User's email address
+   * @returns { token: string (reset token) }
+   */
+  forgotPassword: async (email: string) => {
+    const response = await apiClient.post('/forgot-password', {
+      email,
+    });
+    return response.data;
+  },
+
+  /**
+   * Reset password with reset token
+   * @param token - Password reset token from forgotPassword
+   * @param newPassword - New password (min 8 characters)
+   * @returns { message: string }
+   */
+  resetPassword: async (token: string, newPassword: string) => {
+    const response = await apiClient.post('/reset-password', {
+      token,
+      new_password: newPassword,
+    });
+    return response.data;
+  },
 };
 
 /**

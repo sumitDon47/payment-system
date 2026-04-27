@@ -44,8 +44,11 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
+      console.log('🔄 Attempting login with email:', email);
       // Call the login API
       const response = await userAPI.login(email, password);
+
+      console.log('✅ Login successful:', response);
 
       if (response.token) {
         // Save JWT Token and user info
@@ -54,22 +57,23 @@ export default function LoginScreen() {
         await StorageUtil.setItem('user_name', response.user.name);
         await StorageUtil.setItem('user_email', response.user.email);
 
-        Alert.alert('Success', 'Logged in successfully! 🎉', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Clear form
-              setEmail('');
-              setPassword('');
-              setErrors({});
-            },
-          },
-        ]);
+        console.log('💾 Tokens saved, navigating to wallet...');
+        
+        // Use window.alert for web compatibility
+        setTimeout(() => {
+          window.alert('Success! Logged in successfully! 🎉');
+          // Clear form
+          setEmail('');
+          setPassword('');
+          setErrors({});
+          // Navigate to Wallet
+          navigate('wallet');
+        }, 100);
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to login';
-      console.error('Login error:', error);
-      Alert.alert('Error', errorMessage);
+      console.error('❌ Login error:', error);
+      window.alert('Error: ' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -132,7 +136,11 @@ export default function LoginScreen() {
           {errors.password && (
             <Text className="text-red-500 text-sm mt-1 ml-1">{errors.password}</Text>
           )}
-          <TouchableOpacity className="mt-2 items-end" disabled={loading}>
+          <TouchableOpacity 
+            className="mt-2 items-end" 
+            onPress={() => navigate('forgot-password')}
+            disabled={loading}
+          >
             <Text className="text-blue-600 font-medium">Forgot password?</Text>
           </TouchableOpacity>
         </View>

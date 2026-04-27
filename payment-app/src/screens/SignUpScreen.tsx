@@ -83,8 +83,8 @@ export default function SignUpScreen() {
               setPassword('');
               setConfirmPassword('');
               setErrors({});
-              // Navigate to Login after success
-              navigate('login');
+              // Navigate to Wallet
+              navigate('wallet');
             },
           },
         ]);

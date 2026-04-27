@@ -6,10 +6,10 @@ const isWeb = typeof window !== 'undefined';
 
 // For web, use localhost. For Android emulator, use 10.0.2.2. For iOS, use localhost.
 const BASE_URL = isWeb
-  ? 'http://localhost:8080'
+  ? 'http://localhost:8082'
   : Platform.OS === 'android'
-  ? 'http://10.0.2.2:8080'
-  : 'http://localhost:8080';
+  ? 'http://10.0.2.2:8082'
+  : 'http://localhost:8082';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
