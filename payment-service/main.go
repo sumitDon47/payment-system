@@ -33,7 +33,7 @@ func main() {
 	defer stop()
 
 	// Determine which port to run on
-	port := getEnv("GRPC_PORT", "9090")
+	port := getEnv("PAYMENT_SERVICE_GRPC_PORT", "9090")
 	kafkaBroker := getEnv("KAFKA_BROKER", "localhost:29092")
 	kafkaTopic := getEnv("KAFKA_TOPIC", model.TopicPaymentCompleted)
 	dlqTopic := getEnv("KAFKA_DLQ_TOPIC", model.TopicPaymentDLQ)

@@ -57,6 +57,18 @@ func runMigrations() {
 		status        VARCHAR(20) DEFAULT 'pending',
 		created_at    TIMESTAMP DEFAULT NOW()
 	);
+
+	CREATE TABLE IF NOT EXISTS password_reset_tokens (
+		id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		token         VARCHAR(255) NOT NULL UNIQUE,
+		expires_at    TIMESTAMP NOT NULL,
+		created_at    TIMESTAMP DEFAULT NOW(),
+		CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(id)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token);
+	CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens(expires_at);
 	`
 	_, err := DB.Exec(query)
 	if err != nil {

@@ -45,6 +45,10 @@ func main() {
 	// Auth endpoints with rate limiting (5 requests/minute per IP)
 	mux.HandleFunc("/register", middleware.LimitAuth(handler.Register))
 	mux.HandleFunc("/login", middleware.LimitAuth(handler.Login))
+	mux.HandleFunc("/forgot-password", middleware.LimitAuth(handler.ForgotPassword))
+
+	// Password reset with higher rate limit (100 requests/minute per IP)
+	mux.HandleFunc("/reset-password", middleware.LimitApi(handler.ResetPassword))
 
 	// Protected routes with rate limiting (100 requests/minute per IP)
 	mux.HandleFunc("/profile", middleware.AuthMiddleware(middleware.LimitApi(handler.GetProfile)))
@@ -58,7 +62,7 @@ func main() {
 	mux.Handle("/metrics", promhttp.Handler())
 	server := middleware.SecurityHeadersMiddleware(middleware.CORSMiddleware(mux))
 
-	port := os.Getenv("PORT")
+	port := os.Getenv("USER_SERVICE_PORT")
 	if port == "" {
 		port = "8080"
 	}
