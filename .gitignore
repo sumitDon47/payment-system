@@ -1,4 +1,42 @@
+# Environment
 .env
-*.exe
-*.test
+.env.local
+
+# Dependencies
+node_modules/
 vendor/
+go.sum
+
+# Build artifacts
+*.exe
+*.o
+*.a
+*.so
+.DS_Store
+
+# IDE & Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+*.sublime-workspace
+
+# Test & Coverage
+*.out
+*.test
+coverage.html
+.coverage
+
+# OS
+Thumbs.db
+.DS_Store
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.temp
+body.json
