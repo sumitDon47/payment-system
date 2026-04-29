@@ -10,7 +10,6 @@ import (
 	"os"
 )
 
-// SendGridClient handles email delivery via SendGrid API
 type SendGridClient struct {
 	apiKey     string
 	fromEmail  string
