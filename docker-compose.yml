@@ -5,9 +5,9 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yourpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-payment_db}
     ports:
       - "5432:5432"
     volumes:
@@ -71,9 +71,18 @@ services:
     build:
       context: .
       dockerfile: user-service/Dockerfile
-    env_file: ./.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-yourpassword}
+      DB_NAME: ${POSTGRES_DB:-payment_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-here}
+      PORT: 8080
     ports:
-      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+      - "${USER_SERVICE_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,9 +93,16 @@ services:
     build:
       context: .
       dockerfile: payment-service/Dockerfile
-    env_file: ./.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-yourpassword}
+      DB_NAME: ${POSTGRES_DB:-payment_db}
+      KAFKA_BROKER: kafka:9092
+      GRPC_PORT: 9090
     ports:
-      - "${PAYMENT_SERVICE_GRPC_PORT}:${PAYMENT_SERVICE_GRPC_PORT}"
+      - "${PAYMENT_SERVICE_GRPC_PORT:-9090}:9090"
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,7 +113,9 @@ services:
     build:
       context: .
       dockerfile: notification-service/Dockerfile
-    env_file: ./.env
+    environment:
+      KAFKA_BROKER: kafka:9092
+      KAFKA_CONSUMER_GROUP: notification-service-group
     depends_on:
       kafka:
         condition: service_healthy
