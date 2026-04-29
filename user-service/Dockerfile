@@ -1,7 +1,8 @@
 FROM golang:1.25-alpine AS builder
 WORKDIR /app
-COPY go.mod ./
-COPY . .
+COPY payment-service/ ../payment-service/
+COPY user-service/go.mod ./
+COPY user-service/ .
 RUN go mod tidy && go build -o user-service .
 
 # Final stage — tiny image

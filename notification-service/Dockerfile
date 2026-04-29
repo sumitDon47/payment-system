@@ -1,8 +1,8 @@
 FROM golang:1.23-alpine AS builder
 WORKDIR /app
-COPY go.mod go.sum ./
+COPY notification-service/go.mod notification-service/go.sum ./
 RUN go mod download
-COPY . .
+COPY notification-service/ .
 RUN go build -o notification-service .
 
 FROM alpine:latest

@@ -137,7 +137,8 @@ jobs:
       - name: Build user-service
         uses: docker/build-push-action@v5
         with:
-          context: ./user-service
+          context: .
+          dockerfile: ./user-service/Dockerfile
           push: false
           tags: payment-system/user-service:latest
           cache-from: type=gha
@@ -146,7 +147,8 @@ jobs:
       - name: Build payment-service
         uses: docker/build-push-action@v5
         with:
-          context: ./payment-service
+          context: .
+          dockerfile: ./payment-service/Dockerfile
           push: false
           tags: payment-system/payment-service:latest
           cache-from: type=gha
@@ -155,7 +157,8 @@ jobs:
       - name: Build notification-service
         uses: docker/build-push-action@v5
         with:
-          context: ./notification-service
+          context: .
+          dockerfile: ./notification-service/Dockerfile
           push: false
           tags: payment-system/notification-service:latest
           cache-from: type=gha
