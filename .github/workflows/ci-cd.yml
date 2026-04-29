@@ -179,7 +179,7 @@ jobs:
         run: |
           docker compose up -d --build
           echo "Waiting for services to be ready..."
-          sleep 40
+          sleep 60
 
       - name: Set up Go
         uses: actions/setup-go@v5
