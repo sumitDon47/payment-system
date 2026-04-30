@@ -209,3 +209,36 @@ func (client *SendGridClient) sendRequest(emailReq EmailRequest) error {
 	log.Printf("📧 Password reset email sent to %s", emailReq.Personalizations[0].To[0].Email)
 	return nil
 }
+
+// SendEmail sends a generic email with HTML content
+func (client *SendGridClient) SendEmail(toEmail, subject, htmlContent string) error {
+	if client == nil {
+		log.Printf("⚠️  Email service disabled — skipping email to %s", toEmail)
+		return nil
+	}
+
+	emailReq := EmailRequest{
+		Personalizations: []Personalization{
+			{
+				To: []EmailAddress{
+					{
+						Email: toEmail,
+					},
+				},
+			},
+		},
+		From: EmailAddress{
+			Email: client.fromEmail,
+			Name:  client.fromName,
+		},
+		Subject: subject,
+		Content: []Content{
+			{
+				Type:  "text/html",
+				Value: htmlContent,
+			},
+		},
+	}
+
+	return client.sendRequest(emailReq)
+}

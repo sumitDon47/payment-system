@@ -84,7 +84,13 @@ func Transfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6. Return the response to the mobile app
+	// 6. Invalidate cache for both sender and receiver to ensure fresh balances
+	if Cache != nil {
+		Cache.InvalidateMultiple(r.Context(), senderID, req.ReceiverID)
+		log.Printf("💾 Cache invalidated for sender=%s and receiver=%s after transfer", senderID, req.ReceiverID)
+	}
+
+	// 7. Return the response to the mobile app
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
 }

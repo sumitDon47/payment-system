@@ -13,7 +13,7 @@ import (
 func allowedOrigins() map[string]struct{} {
 	origins := os.Getenv("CORS_ALLOWED_ORIGINS")
 	if strings.TrimSpace(origins) == "" {
-		origins = "http://localhost:3000,http://localhost:5173,http://localhost:8081"
+		origins = "http://localhost:3000,http://localhost:5173,http://localhost:8081,http://localhost:8083"
 	}
 
 	set := make(map[string]struct{})

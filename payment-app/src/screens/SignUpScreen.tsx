@@ -2,38 +2,41 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
+  ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from 'react-native';
 import { userAPI } from '../api/services';
 import { StorageUtil } from '../api/storage';
 import { useNavigation } from '../navigation/NavigationContext';
+import { Input, Checkbox, FormError, FormSuccess } from '../components/FormComponents';
+import { Button, Card, Divider } from '../components/UI';
+import { colors } from '../styles/colors';
+import { spacing, borderRadius } from '../styles/theme';
 
 export default function SignUpScreen() {
-  const { navigate } = useNavigation();
+  const { navigate, setTempEmail } = useNavigation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
+    terms?: string;
   }>({});
+  const [successMessage, setSuccessMessage] = useState('');
 
-  // Validate inputs
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
     if (!name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'Full name is required';
     }
 
     if (!email.trim()) {
@@ -46,10 +49,16 @@ export default function SignUpScreen() {
       newErrors.password = 'Password is required';
     } else if (password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      newErrors.password = 'Password must contain uppercase, lowercase, and numbers';
     }
 
     if (password !== confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!agreeToTerms) {
+      newErrors.terms = 'You must agree to terms and conditions';
     }
 
     setErrors(newErrors);
@@ -62,43 +71,30 @@ export default function SignUpScreen() {
     }
 
     setLoading(true);
+    setSuccessMessage('');
     try {
-      // Call backend register endpoint
-      const response = await userAPI.register(name, email, password);
+      console.log('🔄 Sending OTP to:', email);
+      const response = await userAPI.registerWithOTP(name, email, password);
 
-      if (response.token) {
-        // Save JWT token and user info
-        await StorageUtil.setItem('jwt_token', response.token);
-        await StorageUtil.setItem('user_id', response.user.id);
-        await StorageUtil.setItem('user_name', response.user.name);
-        await StorageUtil.setItem('user_email', response.user.email);
-
-        Alert.alert('Success', 'Account created successfully! 🎉', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Clear form
-              setName('');
-              setEmail('');
-              setPassword('');
-              setConfirmPassword('');
-              setErrors({});
-              // Navigate to Wallet
-              navigate('wallet');
-            },
-          },
-        ]);
-      }
+      setSuccessMessage('✓ Verification code sent to your email!');
+      
+      setTimeout(() => {
+        setName('');
+        setPassword('');
+        setConfirmPassword('');
+        setAgreeToTerms(false);
+        setErrors({});
+        setTempEmail(email);
+        navigate('otp-verification');
+      }, 1500);
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to sign up';
       console.error('SignUp error:', error);
 
-      // Handle specific error cases
       if (error.response?.status === 409) {
-        setErrors({ email: 'Email already exists. Please try another.' });
-        Alert.alert('Error', 'This email is already registered. Try logging in instead.');
+        setErrors({ email: 'This email is already registered. Please log in instead.' });
       } else {
-        Alert.alert('Error', errorMessage);
+        setErrors({ email: errorMessage });
       }
     } finally {
       setLoading(false);
@@ -107,137 +103,147 @@ export default function SignUpScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-white"
+      style={{ flex: 1, backgroundColor: colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, padding: spacing.lg }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View className="px-6 py-8">
-          {/* Header */}
-          <Text className="text-4xl font-bold text-gray-900 mb-2 text-center">
-            PaymentApp
+        {/* Header */}
+        <View style={{ alignItems: 'center', marginBottom: spacing['3xl'] }}>
+          <View
+            style={{
+              width: 70,
+              height: 70,
+              borderRadius: borderRadius.full,
+              backgroundColor: `${colors.secondary}15`,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: spacing.lg,
+            }}
+          >
+            <Text style={{ fontSize: 36 }}>✨</Text>
+          </View>
+          <Text style={{ fontSize: 32, fontWeight: 'bold', color: colors.text, marginBottom: spacing.md }}>
+            Join PaymentApp
           </Text>
-          <Text className="text-gray-500 mb-8 text-center text-lg">
-            Create your account
+          <Text style={{ fontSize: 14, color: colors.textSecondary, textAlign: 'center' }}>
+            Create an account to get started
           </Text>
+        </View>
+
+        <Card padding={spacing['2xl']}>
+          {/* Error Message */}
+          {errors.email && !successMessage && (
+            <FormError message={errors.email} />
+          )}
+
+          {/* Success Message */}
+          {successMessage && (
+            <FormSuccess message={successMessage} />
+          )}
 
           {/* Name Input */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium ml-1">Full Name</Text>
-            <TextInput
-              className={`w-full bg-gray-50 border rounded-2xl px-4 py-4 text-gray-900 text-lg ${
-                errors.name ? 'border-red-500' : 'border-gray-200'
-              }`}
-              placeholder="John Doe"
-              placeholderTextColor="#9ca3af"
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                if (text.trim()) setErrors({ ...errors, name: undefined });
-              }}
-              autoCapitalize="words"
-              editable={!loading}
-            />
-            {errors.name && (
-              <Text className="text-red-500 text-sm mt-1 ml-1">{errors.name}</Text>
-            )}
-          </View>
+          <Input
+            label="Full Name"
+            placeholder="John Doe"
+            value={name}
+            onChangeText={(text) => {
+              setName(text);
+              if (text.trim()) setErrors({ ...errors, name: undefined });
+            }}
+            error={errors.name}
+          />
 
           {/* Email Input */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium ml-1">Email Address</Text>
-            <TextInput
-              className={`w-full bg-gray-50 border rounded-2xl px-4 py-4 text-gray-900 text-lg ${
-                errors.email ? 'border-red-500' : 'border-gray-200'
-              }`}
-              placeholder="john@example.com"
-              placeholderTextColor="#9ca3af"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (text.trim()) setErrors({ ...errors, email: undefined });
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!loading}
-            />
-            {errors.email && (
-              <Text className="text-red-500 text-sm mt-1 ml-1">{errors.email}</Text>
-            )}
-          </View>
+          <Input
+            label="Email Address"
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (text.trim()) setErrors({ ...errors, email: undefined });
+            }}
+            keyboardType="email-address"
+            error={errors.email}
+            helperText="We'll send a verification email"
+          />
 
           {/* Password Input */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium ml-1">Password</Text>
-            <TextInput
-              className={`w-full bg-gray-50 border rounded-2xl px-4 py-4 text-gray-900 text-lg ${
-                errors.password ? 'border-red-500' : 'border-gray-200'
-              }`}
-              placeholder="At least 8 characters"
-              placeholderTextColor="#9ca3af"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (text) setErrors({ ...errors, password: undefined });
-              }}
-              secureTextEntry
-              editable={!loading}
-            />
-            {errors.password && (
-              <Text className="text-red-500 text-sm mt-1 ml-1">{errors.password}</Text>
-            )}
-          </View>
+          <Input
+            label="Password"
+            placeholder="At least 8 characters"
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (text) setErrors({ ...errors, password: undefined });
+            }}
+            secureTextEntry
+            error={errors.password}
+            helperText="Must contain uppercase, lowercase, and numbers"
+          />
 
           {/* Confirm Password Input */}
-          <View className="mb-6">
-            <Text className="text-gray-700 mb-2 font-medium ml-1">Confirm Password</Text>
-            <TextInput
-              className={`w-full bg-gray-50 border rounded-2xl px-4 py-4 text-gray-900 text-lg ${
-                errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
-              }`}
-              placeholder="Re-enter your password"
-              placeholderTextColor="#9ca3af"
-              value={confirmPassword}
-              onChangeText={(text) => {
-                setConfirmPassword(text);
-                if (text) setErrors({ ...errors, confirmPassword: undefined });
-              }}
-              secureTextEntry
-              editable={!loading}
+          <Input
+            label="Confirm Password"
+            placeholder="Re-enter your password"
+            value={confirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              if (text) setErrors({ ...errors, confirmPassword: undefined });
+            }}
+            secureTextEntry
+            error={errors.confirmPassword}
+          />
+
+          {/* Terms Checkbox */}
+          <View style={{ marginBottom: spacing.xl }}>
+            <Checkbox
+              label="I agree to Terms of Service and Privacy Policy"
+              checked={agreeToTerms}
+              onToggle={setAgreeToTerms}
             />
-            {errors.confirmPassword && (
-              <Text className="text-red-500 text-sm mt-1 ml-1">
-                {errors.confirmPassword}
+            {errors.terms && (
+              <Text style={{ color: colors.error, fontSize: 12, marginLeft: spacing.md }}>
+                {errors.terms}
               </Text>
             )}
           </View>
 
           {/* Sign Up Button */}
-          <TouchableOpacity
-            className={`w-full bg-blue-600 rounded-2xl py-4 items-center flex-row justify-center mb-4 ${
-              loading ? 'opacity-70' : ''
-            }`}
+          <Button
+            title={loading ? 'Creating account...' : 'Create Account'}
             onPress={handleSignUp}
+            loading={loading}
             disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text className="text-white font-bold text-lg">Create Account</Text>
-            )}
-          </TouchableOpacity>
+            fullWidth
+            size="lg"
+          />
+
+          <Divider margin={spacing.xl} />
 
           {/* Login Link */}
-          <View className="flex-row justify-center items-center">
-            <Text className="text-gray-600">Already have an account? </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.sm }}>
+            <Text style={{ color: colors.textSecondary }}>Already have an account?</Text>
             <TouchableOpacity onPress={() => navigate('login')} disabled={loading}>
-              <Text className="text-blue-600 font-semibold">Log in</Text>
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>Sign in</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Card>
+
+        {/* Footer */}
+        <Text
+          style={{
+            fontSize: 12,
+            color: colors.textTertiary,
+            textAlign: 'center',
+            marginTop: spacing['3xl'],
+          }}
+        >
+          By creating an account, you agree to our policies
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );

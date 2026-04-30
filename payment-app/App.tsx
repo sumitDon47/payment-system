@@ -1,14 +1,20 @@
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, LogBox } from 'react-native';
 import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { NavigationProvider, useNavigation } from './src/navigation/NavigationContext';
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
+import OTPVerificationScreen from './src/screens/OTPVerificationScreen';
 import WalletScreen from './src/screens/WalletScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import TransactionHistoryScreen from './src/screens/TransactionHistoryScreen';
 import './global.css';
+
+// Suppress deprecated pointerEvents warning from NativeWind
+LogBox.ignoreLogs(['props.pointerEvents is deprecated']);
 
 // Initialize dark mode for NativeWind
 try {
@@ -18,7 +24,7 @@ try {
 }
 
 function AppContent() {
-  const { currentScreen, navigate, setResetToken } = useNavigation();
+  const { currentScreen, navigate, setResetToken, tempEmail, setTempEmail } = useNavigation();
 
   useEffect(() => {
     // Handle deep linking from email reset links
@@ -40,10 +46,19 @@ function AppContent() {
         <LoginScreen />
       ) : currentScreen === 'signup' ? (
         <SignUpScreen />
+      ) : currentScreen === 'otp-verification' ? (
+        <OTPVerificationScreen 
+          email={tempEmail}
+          onVerified={() => setTempEmail('')}
+        />
       ) : currentScreen === 'forgot-password' ? (
         <ForgotPasswordScreen />
       ) : currentScreen === 'reset-password' ? (
         <ResetPasswordScreen />
+      ) : currentScreen === 'profile' ? (
+        <ProfileScreen />
+      ) : currentScreen === 'transactions' ? (
+        <TransactionHistoryScreen />
       ) : (
         <WalletScreen />
       )}

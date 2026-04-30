@@ -88,6 +88,50 @@ export const userAPI = {
     });
     return response.data;
   },
+
+  /**
+   * Register with OTP verification
+   * Step 1: Send name, email, password to get OTP sent to email
+   * @param name - User's full name
+   * @param email - User's email address
+   * @param password - User's password (min 8 characters)
+   * @returns { message: string, email: string }
+   */
+  registerWithOTP: async (name: string, email: string, password: string) => {
+    const response = await apiClient.post('/register-otp', {
+      name,
+      email,
+      password,
+    });
+    return response.data;
+  },
+
+  /**
+   * Verify OTP and create account
+   * Step 2: Send email and OTP code to complete registration
+   * @param email - User's email address
+   * @param code - 6-digit OTP code from email
+   * @returns { token: string, user: { id, name, email, balance, created_at, updated_at } }
+   */
+  verifyOTP: async (email: string, code: string) => {
+    const response = await apiClient.post('/verify-otp', {
+      email,
+      code,
+    });
+    return response.data;
+  },
+
+  /**
+   * Resend OTP code to email
+   * @param email - User's email address
+   * @returns { message: string, email: string }
+   */
+  resendOTP: async (email: string) => {
+    const response = await apiClient.post('/resend-otp', {
+      email,
+    });
+    return response.data;
+  },
 };
 
 /**
@@ -118,6 +162,20 @@ export const paymentAPI = {
         currency,
         note,
       });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Lookup a user by email to get their ID
+   * @param email - User's email address
+   * @returns { id, name, email }
+   */
+  lookupUserByEmail: async (email: string) => {
+    try {
+      const response = await apiClient.get(`/users/lookup?email=${encodeURIComponent(email)}`);
       return response.data;
     } catch (error) {
       throw error;

@@ -47,6 +47,11 @@ func main() {
 	mux.HandleFunc("/login", middleware.LimitAuth(handler.Login))
 	mux.HandleFunc("/forgot-password", middleware.LimitAuth(handler.ForgotPassword))
 
+	// OTP endpoints with rate limiting (5 requests/minute per IP)
+	mux.HandleFunc("/register-otp", middleware.LimitAuth(handler.RegisterWithOTP))
+	mux.HandleFunc("/verify-otp", middleware.LimitAuth(handler.VerifyOTP))
+	mux.HandleFunc("/resend-otp", middleware.LimitAuth(handler.ResendOTP))
+
 	// Password reset with higher rate limit (100 requests/minute per IP)
 	mux.HandleFunc("/reset-password", middleware.LimitApi(handler.ResetPassword))
 
@@ -54,6 +59,7 @@ func main() {
 	mux.HandleFunc("/profile", middleware.AuthMiddleware(middleware.LimitApi(handler.GetProfile)))
 	mux.HandleFunc("/wallet", middleware.AuthMiddleware(middleware.LimitApi(handler.GetWalletBalance)))
 	mux.HandleFunc("/transfer", middleware.AuthMiddleware(middleware.LimitApi(handler.Transfer)))
+	mux.HandleFunc("/users/lookup", middleware.AuthMiddleware(middleware.LimitApi(handler.LookupUserByEmail)))
 
 	// Internal route — cache invalidation called by payment-service
 	// In production this would be behind internal network only

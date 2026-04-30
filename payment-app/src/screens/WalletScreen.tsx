@@ -83,6 +83,29 @@ export default function WalletScreen() {
     setRefreshing(false);
   }, [fetchWalletData]);
 
+  // Lookup receiver by email
+  const handleLookupReceiver = async (email: string) => {
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setReceiverId('');
+      return;
+    }
+
+    try {
+      const response = await paymentAPI.lookupUserByEmail(email);
+      console.log('✅ User found:', response);
+      const userId = response.data?.id;
+      if (userId) {
+        setReceiverId(userId);
+        setErrors({ ...errors, receiverEmail: undefined });
+      }
+    } catch (error: any) {
+      console.error('❌ Lookup failed:', error);
+      setReceiverId('');
+      const errorMsg = error.response?.data?.error || 'User not found';
+      setErrors({ ...errors, receiverEmail: errorMsg });
+    }
+  };
+
   // Validate transfer form
   const validateTransfer = (): boolean => {
     const newErrors: typeof errors = {};
@@ -91,6 +114,8 @@ export default function WalletScreen() {
       newErrors.receiverEmail = 'Receiver email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(receiverEmail)) {
       newErrors.receiverEmail = 'Please enter a valid email';
+    } else if (!receiverId) {
+      newErrors.receiverEmail = 'Please verify receiver email first';
     }
 
     const amount = parseFloat(transferAmount);
@@ -113,10 +138,8 @@ export default function WalletScreen() {
 
     setTransferLoading(true);
     try {
-      // For now, we'll use the transfer endpoint which requires receiver_id
-      // In production, you'd need a lookup endpoint to get receiver_id from email
       const response = await paymentAPI.sendPayment(
-        receiverId || 'temp-receiver-id', // This should be resolved from email
+        receiverId,
         parseFloat(transferAmount),
         transferCurrency,
         transferNote
@@ -225,6 +248,11 @@ export default function WalletScreen() {
                   setReceiverEmail(text);
                   if (errors.receiverEmail) {
                     setErrors({ ...errors, receiverEmail: undefined });
+                  }
+                }}
+                onBlur={() => {
+                  if (receiverEmail.trim()) {
+                    handleLookupReceiver(receiverEmail);
                   }
                 }}
                 keyboardType="email-address"

@@ -69,6 +69,22 @@ func runMigrations() {
 
 	CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token);
 	CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens(expires_at);
+
+	CREATE TABLE IF NOT EXISTS otp_codes (
+		id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		email         VARCHAR(150) NOT NULL,
+		code          VARCHAR(6) NOT NULL,
+		name          VARCHAR(100) NOT NULL,
+		password_hash VARCHAR(255) NOT NULL,
+		expires_at    TIMESTAMP NOT NULL,
+		attempts      INTEGER DEFAULT 0,
+		verified      BOOLEAN DEFAULT FALSE,
+		created_at    TIMESTAMP DEFAULT NOW(),
+		UNIQUE(email, code)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_otp_email ON otp_codes(email);
+	CREATE INDEX IF NOT EXISTS idx_otp_expires ON otp_codes(expires_at);
 	`
 	_, err := DB.Exec(query)
 	if err != nil {
