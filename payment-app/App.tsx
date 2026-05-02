@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme, LogBox } from 'react-native';
+import { useColorScheme, LogBox, Platform } from 'react-native';
 import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { NavigationProvider, useNavigation } from './src/navigation/NavigationContext';
@@ -27,8 +27,8 @@ function AppContent() {
   const { currentScreen, navigate, setResetToken, tempEmail, setTempEmail } = useNavigation();
 
   useEffect(() => {
-    // Handle deep linking from email reset links
-    if (typeof window !== 'undefined') {
+    // Handle deep linking from email reset links (web only)
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       

@@ -1,3 +1,64 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  * {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-white text-gray-900;
+  }
+}
+
+@layer components {
+  /* Gradient utilities */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-purple-600 to-purple-500;
+  }
+
+  .gradient-secondary {
+    @apply bg-gradient-to-r from-pink-500 to-pink-400;
+  }
+
+  .gradient-accent {
+    @apply bg-gradient-to-r from-cyan-500 to-cyan-400;
+  }
+
+  /* Card utilities */
+  .card-elevated {
+    @apply rounded-2xl shadow-lg bg-white;
+  }
+
+  .card-interactive {
+    @apply rounded-2xl shadow-lg bg-white transition-all duration-200 active:scale-95;
+  }
+
+  /* Button utilities */
+  .btn-primary {
+    @apply px-6 py-3 rounded-lg font-bold text-white shadow-lg transition-all duration-200 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 rounded-lg font-bold text-white shadow-lg transition-all duration-200 active:scale-95;
+  }
+
+  /* Input utilities */
+  .input-enhanced {
+    @apply w-full px-4 py-3 rounded-lg font-medium text-gray-900 border-2 border-gray-300 transition-all duration-200;
+  }
+
+  .input-enhanced:focus {
+    @apply border-purple-500 bg-purple-50 outline-none;
+  }
+
+  /* Badge utilities */
+  .badge-success {
+    @apply inline-flex items-center px-3 py-1 rounded-full font-bold text-white shadow-sm;
+  }
+
+  .badge-error {
+    @apply inline-flex items-center px-3 py-1 rounded-full font-bold text-white shadow-sm;
+  }
+}
