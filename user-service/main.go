@@ -59,6 +59,7 @@ func main() {
 	mux.HandleFunc("/profile", middleware.AuthMiddleware(middleware.LimitApi(handler.GetProfile)))
 	mux.HandleFunc("/wallet", middleware.AuthMiddleware(middleware.LimitApi(handler.GetWalletBalance)))
 	mux.HandleFunc("/transfer", middleware.AuthMiddleware(middleware.LimitApi(handler.Transfer)))
+	mux.HandleFunc("/mpin", middleware.AuthMiddleware(middleware.LimitApi(handler.SetMPIN)))
 	mux.HandleFunc("/users/lookup", middleware.AuthMiddleware(middleware.LimitApi(handler.LookupUserByEmail)))
 
 	// Internal route — cache invalidation called by payment-service

@@ -1,53 +1,53 @@
 export const colors = {
-  // Primary brand colors - Bold & Vibrant
-  primary: '#5b21b6', // Deep Purple
-  primaryLight: '#7c3aed',
-  primaryBright: '#a78bfa',
-  primaryDark: '#4c1d95',
+  // Primary brand colors - Modern Blue Gradient
+  primary: '#0066cc', // Vibrant Blue
+  primaryLight: '#0080ff',
+  primaryBright: '#3399ff',
+  primaryDark: '#004d99',
   
-  // Secondary colors - Vibrant Pink/Magenta
-  secondary: '#ec1b8d', // Hot Pink
-  secondaryLight: '#f43f9f',
-  secondaryBright: '#ff69b4',
-  secondaryDark: '#be185d',
+  // Secondary colors - Teal/Cyan
+  secondary: '#00ccbb', // Teal
+  secondaryLight: '#00e6d6',
+  secondaryBright: '#00ffeb',
+  secondaryDark: '#009988',
   
-  // Accent - Vivid Cyan
-  accent: '#06b6d4',
-  accentLight: '#22d3ee',
-  accentDark: '#0e7490',
+  // Accent - Coral/Orange
+  accent: '#ff6b35',
+  accentLight: '#ff8555',
+  accentDark: '#cc5529',
   
-  // Semantic colors - Bold
-  success: '#059669', // Bold Green
-  successLight: '#10b981',
-  successBright: '#34d399',
-  error: '#dc2626', // Bold Red
-  errorLight: '#ef4444',
-  errorBright: '#f87171',
-  warning: '#d97706', // Bold Amber
-  warningLight: '#f59e0b',
-  warningBright: '#fbbf24',
-  info: '#2563eb', // Bold Blue
-  infoLight: '#3b82f6',
-  infoBright: '#60a5fa',
+  // Semantic colors - Modern Vibrant
+  success: '#10b981', // Emerald Green
+  successLight: '#34d399',
+  successBright: '#6ee7b7',
+  error: '#ef4444', // Modern Red
+  errorLight: '#f87171',
+  errorBright: '#fca5a5',
+  warning: '#f59e0b', // Amber
+  warningLight: '#fbbf24',
+  warningBright: '#fcd34d',
+  info: '#06b6d4', // Cyan
+  infoLight: '#22d3ee',
+  infoBright: '#67e8f9',
   
-  // Neutral colors - Modern
-  background: '#ffffff',
-  surface: '#f8fafc',
-  surfaceDark: '#f1f5f9',
+  // Neutral colors - Clean & Modern
+  background: '#f0f4f8',
+  surface: '#ffffff',
+  surfaceDark: '#f8fafc',
   surfaceCard: '#ffffff',
-  border: '#cbd5e1',
-  borderLight: '#e2e8f0',
-  borderDark: '#94a3b8',
+  border: '#e2e8f0',
+  borderLight: '#f1f5f9',
+  borderDark: '#cbd5e1',
   
   // Text colors
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textTertiary: '#78716c',
+  text: '#1a202c',
+  textSecondary: '#4a5568',
+  textTertiary: '#718096',
   textInverse: '#ffffff',
   
-  // Overlay - More prominent
-  overlay: 'rgba(0, 0, 0, 0.6)',
-  overlayLight: 'rgba(0, 0, 0, 0.15)',
+  // Overlay - Modern with more transparency
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  overlayLight: 'rgba(0, 0, 0, 0.08)',
   
   // Gradient - Vibrant
   gradient: ['#5b21b6', '#ec1b8d', '#06b6d4'],

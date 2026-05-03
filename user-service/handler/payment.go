@@ -2,13 +2,17 @@ package handler
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"time"
 
 	pb "github.com/sumitDon47/payment-system/payment-service/proto"
+	"github.com/sumitDon47/payment-system/user-service/db"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -18,7 +22,10 @@ type TransferRequest struct {
 	Amount     float64 `json:"amount"`
 	Currency   string  `json:"currency"`
 	Note       string  `json:"note"`
+	MPIN       string  `json:"mpin"`
 }
+
+var mpinPattern = regexp.MustCompile(`^\d{4}$`)
 
 func Transfer(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -44,6 +51,34 @@ func Transfer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error": "Invalid receiver or amount"}`, http.StatusBadRequest)
 		return
 	}
+
+	if !mpinPattern.MatchString(req.MPIN) {
+		http.Error(w, `{"error": "MPIN must be exactly 4 digits"}`, http.StatusBadRequest)
+		return
+	}
+
+	var mpinHash sql.NullString
+	err := db.DB.QueryRowContext(r.Context(), `SELECT mpin_hash FROM users WHERE id = $1`, senderID).Scan(&mpinHash)
+	if err == sql.ErrNoRows {
+		http.Error(w, `{"error": "User not found"}`, http.StatusUnauthorized)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to fetch MPIN hash: %v", err)
+		http.Error(w, `{"error": "Internal server error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if !mpinHash.Valid || mpinHash.String == "" {
+		http.Error(w, `{"error": "MPIN is not set. Please set your MPIN from profile."}`, http.StatusForbidden)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(mpinHash.String), []byte(req.MPIN)); err != nil {
+		http.Error(w, `{"error": "Invalid MPIN"}`, http.StatusUnauthorized)
+		return
+	}
+
 	if req.Currency == "" {
 		req.Currency = "NPR" // default to NPR
 	}

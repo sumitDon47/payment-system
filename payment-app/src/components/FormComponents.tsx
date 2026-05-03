@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { colors } from '../styles/colors';
-import { borderRadius, spacing, shadows } from '../styles/theme';
+import { borderRadius, spacing, shadows, scale, typography } from '../styles/theme';
 
 interface InputProps {
   label?: string;
@@ -15,6 +15,7 @@ interface InputProps {
   onFocus?: () => void;
   onBlur?: () => void;
   icon?: string;
+  editable?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -29,12 +30,14 @@ export const Input: React.FC<InputProps> = ({
   onFocus,
   onBlur,
   icon,
+  editable = true,
 }) => {
   const [showPassword, setShowPassword] = useState(!secureTextEntry);
   const [isFocused, setIsFocused] = useState(false);
   const animatedScale = React.useRef(new Animated.Value(1)).current;
 
   const handleFocus = () => {
+    if (!editable) return;
     setIsFocused(true);
     Animated.spring(animatedScale, {
       toValue: 1.02,
@@ -52,14 +55,14 @@ export const Input: React.FC<InputProps> = ({
     onBlur?.();
   };
 
-  const borderColor = error ? colors.errorLight : isFocused ? colors.primaryLight : colors.border;
-  const bgColor = isFocused ? colors.primaryBright : colors.surface;
+  const borderColor = error ? colors.errorLight : isFocused ? colors.primary : colors.border;
+  const bgColor = isFocused ? colors.surfaceCard : colors.surface;
 
   return (
     <View style={{ marginBottom: spacing.lg }}>
       {label && (
         <Text style={{ 
-          fontSize: 14, 
+          fontSize: scale(14), 
           fontWeight: '700', 
           color: colors.text, 
           marginBottom: spacing.sm,
@@ -77,16 +80,17 @@ export const Input: React.FC<InputProps> = ({
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            borderWidth: 2.5,
+            borderWidth: 2,
             borderColor,
             borderRadius: borderRadius.lg,
             paddingHorizontal: spacing.md,
             backgroundColor: bgColor,
+            opacity: editable ? 1 : 0.6,
             ...shadows.md,
           }}
         >
           {icon && (
-            <Text style={{ fontSize: 18, marginRight: spacing.sm }}>
+            <Text style={{ fontSize: scale(18), marginRight: spacing.sm }}>
               {icon}
             </Text>
           )}
@@ -98,10 +102,11 @@ export const Input: React.FC<InputProps> = ({
             keyboardType={keyboardType}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            editable={editable}
             style={{
               flex: 1,
-              paddingVertical: spacing.md + 2,
-              fontSize: 16,
+              paddingVertical: spacing.md,
+              fontSize: scale(16),
               color: colors.text,
               fontWeight: '500',
             }}
@@ -112,7 +117,7 @@ export const Input: React.FC<InputProps> = ({
               onPress={() => setShowPassword(!showPassword)}
               style={{ padding: spacing.sm }}
             >
-              <Text style={{ fontSize: 20 }}>
+              <Text style={{ fontSize: scale(20) }}>
                 {showPassword ? '👁️' : '🔒'}
               </Text>
             </TouchableOpacity>
@@ -121,13 +126,13 @@ export const Input: React.FC<InputProps> = ({
       </Animated.View>
       {error && (
         <View style={{ marginTop: spacing.sm }}>
-          <Text style={{ fontSize: 12, color: colors.errorLight, fontWeight: '700', letterSpacing: 0.2 }}>
+          <Text style={{ fontSize: scale(12), color: colors.errorLight, fontWeight: '600', letterSpacing: 0.2 }}>
             ✕ {error}
           </Text>
         </View>
       )}
       {helperText && !error && (
-        <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: spacing.sm, fontWeight: '500' }}>
+        <Text style={{ fontSize: scale(12), color: colors.textTertiary, marginTop: spacing.sm, fontWeight: '500' }}>
           ℹ️ {helperText}
         </Text>
       )}
@@ -147,7 +152,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({ label, checked, onToggle }) 
 
   const handlePress = () => {
     Animated.sequence([
-      Animated.timing(animatedScale, { toValue: 0.9, duration: 100, useNativeDriver: true }),
+      Animated.timing(animatedScale, { toValue: 0.85, duration: 100, useNativeDriver: true }),
       Animated.timing(animatedScale, { toValue: 1, duration: 100, useNativeDriver: true }),
     ]).start();
     onToggle(!checked);
@@ -166,25 +171,25 @@ export const Checkbox: React.FC<CheckboxProps> = ({ label, checked, onToggle }) 
       >
         <View
           style={{
-            width: 24,
-            height: 24,
-            borderWidth: 2.5,
-            borderColor: checked ? colors.primaryLight : colors.border,
+            width: scale(24),
+            height: scale(24),
+            borderWidth: 2,
+            borderColor: checked ? colors.primary : colors.border,
             borderRadius: borderRadius.md,
-            backgroundColor: checked ? colors.primaryLight : 'transparent',
+            backgroundColor: checked ? colors.primary : 'transparent',
             justifyContent: 'center',
             alignItems: 'center',
             ...shadows.sm,
           }}
         >
           {checked && (
-            <Text style={{ color: colors.textInverse, fontWeight: '800', fontSize: 14 }}>
+            <Text style={{ color: colors.textInverse, fontWeight: '800', fontSize: scale(14) }}>
               ✓
             </Text>
           )}
         </View>
       </Animated.View>
-      <Text style={{ fontSize: 15, color: colors.text, fontWeight: '500', letterSpacing: 0.2 }}>
+      <Text style={{ fontSize: scale(15), color: colors.text, fontWeight: '500', letterSpacing: 0.2 }}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -199,15 +204,15 @@ export const FormError: React.FC<FormErrorProps> = ({ message }) => (
   <View
     style={{
       backgroundColor: colors.errorLight,
-      borderLeftWidth: 5,
+      borderLeftWidth: scale(5),
       borderLeftColor: colors.error,
-      padding: spacing.md + 2,
+      padding: spacing.md,
       borderRadius: borderRadius.lg,
       marginBottom: spacing.lg,
       ...shadows.md,
     }}
   >
-    <Text style={{ color: colors.textInverse, fontWeight: '700', fontSize: 14, letterSpacing: 0.3 }}>
+    <Text style={{ color: colors.textInverse, fontWeight: '600', fontSize: scale(14), letterSpacing: 0.2 }}>
       ⚠️ {message}
     </Text>
   </View>
@@ -221,15 +226,15 @@ export const FormSuccess: React.FC<FormSuccessProps> = ({ message }) => (
   <View
     style={{
       backgroundColor: colors.successLight,
-      borderLeftWidth: 5,
+      borderLeftWidth: scale(5),
       borderLeftColor: colors.success,
-      padding: spacing.md + 2,
+      padding: spacing.md,
       borderRadius: borderRadius.lg,
       marginBottom: spacing.lg,
       ...shadows.md,
     }}
   >
-    <Text style={{ color: colors.textInverse, fontWeight: '700', fontSize: 14, letterSpacing: 0.3 }}>
+    <Text style={{ color: colors.textInverse, fontWeight: '600', fontSize: scale(14), letterSpacing: 0.2 }}>
       ✓ {message}
     </Text>
   </View>
@@ -243,17 +248,158 @@ interface FormSectionProps {
 
 export const FormSection: React.FC<FormSectionProps> = ({ title, subtitle, children }) => (
   <View style={{ marginBottom: spacing['2xl'] }}>
-    <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.sm, letterSpacing: 0.5 }}>
+    <Text style={{ fontSize: scale(18), fontWeight: '800', color: colors.text, marginBottom: spacing.sm, letterSpacing: 0.3 }}>
       {title}
     </Text>
     {subtitle && (
-      <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg, fontWeight: '500' }}>
+      <Text style={{ fontSize: scale(14), color: colors.textSecondary, marginBottom: spacing.lg, fontWeight: '500' }}>
         {subtitle}
       </Text>
     )}
     {children}
   </View>
 );
+
+interface RadioProps {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+export const Radio: React.FC<RadioProps> = ({ label, selected, onSelect }) => (
+  <TouchableOpacity
+    onPress={onSelect}
+    activeOpacity={0.7}
+    style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}
+  >
+    <View
+      style={{
+        width: scale(22),
+        height: scale(22),
+        borderWidth: 2,
+        borderColor: selected ? colors.primary : colors.border,
+        borderRadius: borderRadius.full,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: selected ? colors.primary : 'transparent',
+        ...shadows.sm,
+      }}
+    >
+      {selected && (
+        <View
+          style={{
+            width: scale(8),
+            height: scale(8),
+            borderRadius: borderRadius.full,
+            backgroundColor: colors.textInverse,
+          }}
+        />
+      )}
+    </View>
+    <Text style={{ fontSize: scale(15), color: colors.text, fontWeight: '500', letterSpacing: 0.1 }}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
+interface SelectProps {
+  label?: string;
+  options: SelectOption[];
+  selectedValue: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+  error?: string;
+}
+
+export const Select: React.FC<SelectProps> = ({
+  label,
+  options,
+  selectedValue,
+  onValueChange,
+  placeholder = 'Select an option',
+  error,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedLabel = options.find(opt => opt.value === selectedValue)?.label || placeholder;
+
+  return (
+    <View style={{ marginBottom: spacing.lg }}>
+      {label && (
+        <Text style={{ fontSize: scale(14), fontWeight: '700', color: colors.text, marginBottom: spacing.sm, letterSpacing: 0.2 }}>
+          {label}
+        </Text>
+      )}
+      <TouchableOpacity
+        onPress={() => setIsOpen(!isOpen)}
+        style={{
+          borderWidth: 2,
+          borderColor: error ? colors.errorLight : isOpen ? colors.primary : colors.border,
+          borderRadius: borderRadius.lg,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.md,
+          backgroundColor: colors.surfaceCard,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          ...shadows.md,
+        }}
+      >
+        <Text style={{ fontSize: scale(16), color: colors.text, fontWeight: '500' }}>
+          {selectedLabel}
+        </Text>
+        <Text style={{ fontSize: scale(18) }}>
+          {isOpen ? '▲' : '▼'}
+        </Text>
+      </TouchableOpacity>
+      {isOpen && (
+        <View
+          style={{
+            backgroundColor: colors.surfaceCard,
+            borderWidth: 2,
+            borderColor: colors.primary,
+            borderTopWidth: 0,
+            borderBottomLeftRadius: borderRadius.lg,
+            borderBottomRightRadius: borderRadius.lg,
+            marginTop: -2,
+            ...shadows.lg,
+          }}
+        >
+          {options.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              onPress={() => {
+                onValueChange(option.value);
+                setIsOpen(false);
+              }}
+              style={{
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.md,
+                borderBottomWidth: option === options[options.length - 1] ? 0 : 1,
+                borderBottomColor: colors.border,
+                backgroundColor: selectedValue === option.value ? colors.surfaceDark : colors.surfaceCard,
+              }}
+            >
+              <Text style={{ fontSize: scale(15), color: colors.text, fontWeight: '500' }}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      {error && (
+        <Text style={{ fontSize: scale(12), color: colors.errorLight, fontWeight: '600', marginTop: spacing.sm, letterSpacing: 0.2 }}>
+          ✕ {error}
+        </Text>
+      )}
+    </View>
+  );
+};
 
 interface TextAreaProps {
   placeholder: string;

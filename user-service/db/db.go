@@ -44,10 +44,13 @@ func runMigrations() {
 		name        VARCHAR(100) NOT NULL,
 		email       VARCHAR(150) UNIQUE NOT NULL,
 		password    VARCHAR(255) NOT NULL,
+		mpin_hash   VARCHAR(255),
 		balance     NUMERIC(15, 2) DEFAULT 0.00,
 		created_at  TIMESTAMP DEFAULT NOW(),
 		updated_at  TIMESTAMP DEFAULT NOW()
 	);
+
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS mpin_hash VARCHAR(255);
 
 	CREATE TABLE IF NOT EXISTS transactions (
 		id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -76,12 +79,15 @@ func runMigrations() {
 		code          VARCHAR(6) NOT NULL,
 		name          VARCHAR(100) NOT NULL,
 		password_hash VARCHAR(255) NOT NULL,
+		mpin_hash     VARCHAR(255),
 		expires_at    TIMESTAMP NOT NULL,
 		attempts      INTEGER DEFAULT 0,
 		verified      BOOLEAN DEFAULT FALSE,
 		created_at    TIMESTAMP DEFAULT NOW(),
 		UNIQUE(email, code)
 	);
+
+	ALTER TABLE otp_codes ADD COLUMN IF NOT EXISTS mpin_hash VARCHAR(255);
 
 	CREATE INDEX IF NOT EXISTS idx_otp_email ON otp_codes(email);
 	CREATE INDEX IF NOT EXISTS idx_otp_expires ON otp_codes(expires_at);

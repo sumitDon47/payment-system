@@ -1,26 +1,51 @@
+import { Dimensions, Platform } from 'react-native';
+
+const windowWidth = Dimensions.get('window').width;
+const windowHeight = Dimensions.get('window').height;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const widthScaleFactor =
+  Platform.OS === 'web'
+    ? clamp(windowWidth / 1280, 0.9, 1.08)
+    : clamp(windowWidth / 375, 0.9, 1.15);
+
+const heightScaleFactor =
+  Platform.OS === 'web'
+    ? clamp(windowHeight / 900, 0.95, 1.08)
+    : clamp(windowHeight / 812, 0.9, 1.12);
+
+// Responsive scaling function
+export const scale = (size: number) => size * widthScaleFactor;
+export const verticalScale = (size: number) => size * heightScaleFactor;
+
+export const isSmallScreen = windowWidth < 375;
+export const isMediumScreen = windowWidth >= 375 && windowWidth < 768;
+export const isLargeScreen = windowWidth >= 768;
+
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  '2xl': 24,
-  '3xl': 32,
-  '4xl': 40,
-  '5xl': 48,
+  xs: scale(4),
+  sm: scale(8),
+  md: scale(12),
+  lg: scale(16),
+  xl: scale(20),
+  '2xl': scale(24),
+  '3xl': scale(32),
+  '4xl': scale(40),
+  '5xl': scale(48),
 };
 
 export const typography = {
   sizes: {
-    xs: 12,
-    sm: 14,
-    base: 16,
-    lg: 18,
-    xl: 20,
-    '2xl': 24,
-    '3xl': 30,
-    '4xl': 36,
-    '5xl': 48,
+    xs: scale(12),
+    sm: scale(14),
+    base: scale(16),
+    lg: scale(18),
+    xl: scale(20),
+    '2xl': scale(24),
+    '3xl': scale(30),
+    '4xl': scale(36),
+    '5xl': scale(48),
   },
   weights: {
     light: '300',
@@ -40,11 +65,11 @@ export const typography = {
 
 export const borderRadius = {
   none: 0,
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  '2xl': 20,
+  sm: scale(4),
+  md: scale(8),
+  lg: scale(12),
+  xl: scale(16),
+  '2xl': scale(20),
   full: 9999,
 };
 
@@ -52,36 +77,36 @@ export const shadows = {
   sm: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: scale(2),
     elevation: 2,
   },
   md: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: scale(8),
     elevation: 4,
   },
   lg: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
+    shadowOpacity: 0.12,
+    shadowRadius: scale(16),
     elevation: 8,
   },
   xl: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
+    shadowOpacity: 0.15,
+    shadowRadius: scale(24),
     elevation: 12,
   },
   glow: {
-    shadowColor: '#5b21b6',
+    shadowColor: '#0066cc',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowOpacity: 0.25,
+    shadowRadius: scale(12),
     elevation: 8,
   },
 };

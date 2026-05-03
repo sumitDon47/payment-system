@@ -7,9 +7,11 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,6 +28,14 @@ import (
 // If Redis is unavailable, this stays nil and all cache operations are skipped.
 // The service degrades gracefully — slower but still correct.
 var Cache *cache.Client
+var mpinRegex = regexp.MustCompile(`^\d{4}$`)
+
+func validateMPIN(mpin string) error {
+	if !mpinRegex.MatchString(mpin) {
+		return fmt.Errorf("mpin must be exactly 4 digits")
+	}
+	return nil
+}
 
 // HealthCheck godoc
 // GET /health
@@ -68,15 +78,21 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.Email == "" || req.Password == "" {
+	if req.Name == "" || req.Email == "" || req.Password == "" || req.MPIN == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "name, email, and password are required"})
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "name, email, password, and mpin are required"})
 		return
 	}
 
 	if len(req.Password) < 8 {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "password must be at least 8 characters"})
+		return
+	}
+
+	if err := validateMPIN(req.MPIN); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -87,13 +103,20 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hashedMPIN, err := bcrypt.GenerateFromPassword([]byte(req.MPIN), bcrypt.DefaultCost)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "failed to process mpin"})
+		return
+	}
+
 	var user models.User
 	query := `
-		INSERT INTO users (name, email, password)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (name, email, password, mpin_hash)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id, name, email, balance, created_at, updated_at
 	`
-	err = db.DB.QueryRowContext(r.Context(), query, req.Name, req.Email, string(hashedPassword)).Scan(
+	err = db.DB.QueryRowContext(r.Context(), query, req.Name, req.Email, string(hashedPassword), string(hashedMPIN)).Scan(
 		&user.ID, &user.Name, &user.Email, &user.Balance, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -136,13 +159,34 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Email == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "email is required"})
+		return
+	}
+
+	if strings.TrimSpace(req.Password) == "" && strings.TrimSpace(req.MPIN) == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "password or mpin is required"})
+		return
+	}
+
+	if req.MPIN != "" {
+		if err := validateMPIN(req.MPIN); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(models.ErrorResponse{Error: err.Error()})
+			return
+		}
+	}
+
 	log.Printf("[LOGIN] Login attempt for email: %s", req.Email)
 
 	var user models.User
 	var hashedPassword string
-	query := `SELECT id, name, email, password, balance, created_at, updated_at FROM users WHERE email = $1`
+	var mpinHash sql.NullString
+	query := `SELECT id, name, email, password, mpin_hash, balance, created_at, updated_at FROM users WHERE email = $1`
 	err := db.DB.QueryRowContext(r.Context(), query, req.Email).Scan(
-		&user.ID, &user.Name, &user.Email, &hashedPassword,
+		&user.ID, &user.Name, &user.Email, &hashedPassword, &mpinHash,
 		&user.Balance, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -158,18 +202,35 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[LOGIN] User found: %s, comparing passwords", req.Email)
-	log.Printf("[LOGIN] Password from request length: %d chars", len(req.Password))
-	log.Printf("[LOGIN] Hashed password in DB length: %d chars", len(hashedPassword))
+	if req.MPIN != "" {
+		if !mpinHash.Valid || mpinHash.String == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(models.ErrorResponse{Error: "invalid email or credentials"})
+			return
+		}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(req.Password)); err != nil {
-		log.Printf("[LOGIN] PASSWORD MISMATCH for user %s. Error: %v", req.Email, err)
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "invalid email or password"})
-		return
+		if err := bcrypt.CompareHashAndPassword([]byte(mpinHash.String), []byte(req.MPIN)); err != nil {
+			log.Printf("[LOGIN] MPIN MISMATCH for user %s. Error: %v", req.Email, err)
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(models.ErrorResponse{Error: "invalid email or credentials"})
+			return
+		}
+
+		log.Printf("[LOGIN] MPIN MATCHED for user: %s", req.Email)
+	} else {
+		log.Printf("[LOGIN] User found: %s, comparing passwords", req.Email)
+		log.Printf("[LOGIN] Password from request length: %d chars", len(req.Password))
+		log.Printf("[LOGIN] Hashed password in DB length: %d chars", len(hashedPassword))
+
+		if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(req.Password)); err != nil {
+			log.Printf("[LOGIN] PASSWORD MISMATCH for user %s. Error: %v", req.Email, err)
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(models.ErrorResponse{Error: "invalid email or credentials"})
+			return
+		}
+
+		log.Printf("[LOGIN] PASSWORD MATCHED for user: %s", req.Email)
 	}
-
-	log.Printf("[LOGIN] PASSWORD MATCHED for user: %s", req.Email)
 
 	token, err := utils.GenerateToken(user.ID, user.Email)
 	if err != nil {
@@ -510,15 +571,21 @@ func RegisterWithOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.Email == "" || req.Password == "" {
+	if req.Name == "" || req.Email == "" || req.Password == "" || req.MPIN == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "name, email, and password are required"})
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "name, email, password, and mpin are required"})
 		return
 	}
 
 	if len(req.Password) < 8 {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "password must be at least 8 characters"})
+		return
+	}
+
+	if err := validateMPIN(req.MPIN); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -531,7 +598,7 @@ func RegisterWithOTP(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "email already registered"})
 		return
 	}
-	if err != nil && err != sql.ErrNoRows {
+	if err != sql.ErrNoRows {
 		log.Printf("Error checking user: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "internal server error"})
@@ -556,6 +623,14 @@ func RegisterWithOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hashedMPIN, err := bcrypt.GenerateFromPassword([]byte(req.MPIN), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Error hashing mpin: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "failed to process mpin"})
+		return
+	}
+
 	// Delete any existing OTP for this email
 	deleteQuery := `DELETE FROM otp_codes WHERE email = $1 AND verified = false`
 	_, _ = db.DB.ExecContext(r.Context(), deleteQuery, req.Email)
@@ -563,10 +638,10 @@ func RegisterWithOTP(w http.ResponseWriter, r *http.Request) {
 	// Store OTP with 10-minute expiry
 	expiresAt := time.Now().Add(10 * time.Minute)
 	insertQuery := `
-		INSERT INTO otp_codes (email, code, name, password_hash, expires_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO otp_codes (email, code, name, password_hash, mpin_hash, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	_, err = db.DB.ExecContext(r.Context(), insertQuery, req.Email, otp, req.Name, string(hashedPassword), expiresAt)
+	_, err = db.DB.ExecContext(r.Context(), insertQuery, req.Email, otp, req.Name, string(hashedPassword), string(hashedMPIN), expiresAt)
 	if err != nil {
 		log.Printf("Error storing OTP: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -624,18 +699,19 @@ func VerifyOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Find and validate OTP
 	var otpID, name, passwordHash string
+	var mpinHash sql.NullString
 	var expiresAt time.Time
 	var attempts int
 
 	otpQuery := `
-		SELECT id, name, password_hash, expires_at, attempts
+		SELECT id, name, password_hash, mpin_hash, expires_at, attempts
 		FROM otp_codes
 		WHERE email = $1 AND code = $2 AND verified = false
 		ORDER BY created_at DESC
 		LIMIT 1
 	`
 	err := db.DB.QueryRowContext(r.Context(), otpQuery, req.Email, req.Code).Scan(
-		&otpID, &name, &passwordHash, &expiresAt, &attempts,
+		&otpID, &name, &passwordHash, &mpinHash, &expiresAt, &attempts,
 	)
 	if err == sql.ErrNoRows {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -668,11 +744,11 @@ func VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	// Create user account with email from OTP record
 	var user models.User
 	userQuery := `
-		INSERT INTO users (name, email, password)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (name, email, password, mpin_hash)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id, name, email, balance, created_at, updated_at
 	`
-	err = db.DB.QueryRowContext(r.Context(), userQuery, name, req.Email, passwordHash).Scan(
+	err = db.DB.QueryRowContext(r.Context(), userQuery, name, req.Email, passwordHash, mpinHash.String).Scan(
 		&user.ID, &user.Name, &user.Email, &user.Balance, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -784,4 +860,57 @@ func ResendOTP(w http.ResponseWriter, r *http.Request) {
 		Message: "Verification code has been resent to your email",
 		Email:   req.Email,
 	})
+}
+
+// SetMPIN godoc
+// PUT /mpin
+// Sets or updates MPIN for authenticated user
+func SetMPIN(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPut {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "method not allowed"})
+		return
+	}
+
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "unauthorized"})
+		return
+	}
+
+	var req struct {
+		MPIN string `json:"mpin"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "invalid request body"})
+		return
+	}
+
+	if err := validateMPIN(req.MPIN); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	hashedMPIN, err := bcrypt.GenerateFromPassword([]byte(req.MPIN), bcrypt.DefaultCost)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "failed to process mpin"})
+		return
+	}
+
+	_, err = db.DB.ExecContext(r.Context(), `UPDATE users SET mpin_hash = $1, updated_at = NOW() WHERE id = $2`, string(hashedMPIN), userID)
+	if err != nil {
+		log.Printf("Error updating MPIN: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.ErrorResponse{Error: "failed to set mpin"})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(models.SuccessResponse{Message: "MPIN updated successfully"})
 }

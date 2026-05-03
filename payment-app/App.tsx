@@ -18,7 +18,7 @@ LogBox.ignoreLogs(['props.pointerEvents is deprecated']);
 
 // Initialize dark mode for NativeWind
 try {
-  StyleSheet.setFlag('darkMode', 'class');
+  (StyleSheet as any).setFlag?.('darkMode', 'class');
 } catch (e) {
   // Silently fail if not available on non-web platforms
 }
@@ -47,10 +47,7 @@ function AppContent() {
       ) : currentScreen === 'signup' ? (
         <SignUpScreen />
       ) : currentScreen === 'otp-verification' ? (
-        <OTPVerificationScreen 
-          email={tempEmail}
-          onVerified={() => setTempEmail('')}
-        />
+		<OTPVerificationScreen />
       ) : currentScreen === 'forgot-password' ? (
         <ForgotPasswordScreen />
       ) : currentScreen === 'reset-password' ? (

@@ -7,10 +7,11 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { StorageUtil } from '../api/services';
+import { StorageUtil } from '../api/storage';
 import { userAPI } from '../api/services';
 import { useNavigation } from '../navigation/NavigationContext';
 import { Card, Button, Divider, Badge } from '../components/UI';
+import { Input, FormError, FormSuccess } from '../components/FormComponents';
 import { colors } from '../styles/colors';
 import { spacing, borderRadius, shadows } from '../styles/theme';
 
@@ -19,6 +20,11 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isLogoutLoading, setIsLogoutLoading] = useState(false);
+  const [mpin, setMpin] = useState('');
+  const [confirmMpin, setConfirmMpin] = useState('');
+  const [mpinLoading, setMpinLoading] = useState(false);
+  const [mpinError, setMpinError] = useState('');
+  const [mpinSuccess, setMpinSuccess] = useState('');
 
   React.useEffect(() => {
     loadUserData();
@@ -71,6 +77,34 @@ export default function ProfileScreen() {
         },
       ]
     );
+  };
+
+  const handleSetMpin = async () => {
+    setMpinError('');
+    setMpinSuccess('');
+
+    if (!/^\d{4}$/.test(mpin)) {
+      setMpinError('MPIN must be exactly 4 digits');
+      return;
+    }
+
+    if (mpin !== confirmMpin) {
+      setMpinError('MPIN values do not match');
+      return;
+    }
+
+    try {
+      setMpinLoading(true);
+      await userAPI.setMPIN(mpin);
+      setMpin('');
+      setConfirmMpin('');
+      setMpinSuccess('MPIN updated successfully. Use it for login and transfers.');
+    } catch (error: any) {
+      const message = error?.response?.data?.error || error?.message || 'Failed to update MPIN';
+      setMpinError(message);
+    } finally {
+      setMpinLoading(false);
+    }
   };
 
   if (loading) {
@@ -143,6 +177,48 @@ export default function ProfileScreen() {
             <Badge label="Active" variant="success" />
           </View>
         </View>
+      </Card>
+
+      <Divider margin={spacing.xl} />
+
+      <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text, marginBottom: spacing.md }}>
+        Security MPIN
+      </Text>
+
+      <Card padding={spacing.lg} borderRadius={borderRadius.lg}>
+        <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: spacing.lg }}>
+          Set a 4-digit MPIN for quick login and mandatory transfer confirmation.
+        </Text>
+
+        {mpinError ? <FormError message={mpinError} /> : null}
+        {mpinSuccess ? <FormSuccess message={mpinSuccess} /> : null}
+
+        <Input
+          label="New MPIN"
+          placeholder="Enter 4-digit MPIN"
+          value={mpin}
+          onChangeText={(text) => setMpin(text.replace(/\D/g, '').slice(0, 4))}
+          keyboardType="numeric"
+          secureTextEntry
+          helperText="Example: 1234"
+        />
+
+        <Input
+          label="Confirm MPIN"
+          placeholder="Re-enter MPIN"
+          value={confirmMpin}
+          onChangeText={(text) => setConfirmMpin(text.replace(/\D/g, '').slice(0, 4))}
+          keyboardType="numeric"
+          secureTextEntry
+        />
+
+        <Button
+          title={mpinLoading ? 'Updating MPIN...' : 'Set / Change MPIN'}
+          onPress={handleSetMpin}
+          loading={mpinLoading}
+          disabled={mpinLoading}
+          fullWidth
+        />
       </Card>
 
       <Divider margin={spacing.xl} />

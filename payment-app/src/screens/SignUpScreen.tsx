@@ -20,6 +20,8 @@ export default function SignUpScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mpin, setMpin] = useState('');
+  const [confirmMpin, setConfirmMpin] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,6 +30,8 @@ export default function SignUpScreen() {
     email?: string;
     password?: string;
     confirmPassword?: string;
+    mpin?: string;
+    confirmMpin?: string;
     terms?: string;
   }>({});
   const [successMessage, setSuccessMessage] = useState('');
@@ -57,6 +61,14 @@ export default function SignUpScreen() {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    if (!/^\d{4}$/.test(mpin)) {
+      newErrors.mpin = 'MPIN must be exactly 4 digits';
+    }
+
+    if (mpin !== confirmMpin) {
+      newErrors.confirmMpin = 'MPIN does not match';
+    }
+
     if (!agreeToTerms) {
       newErrors.terms = 'You must agree to terms and conditions';
     }
@@ -74,13 +86,15 @@ export default function SignUpScreen() {
     setSuccessMessage('');
     try {
       console.log('🔄 Sending OTP to:', email);
-      const response = await userAPI.registerWithOTP(name, email, password);
+      const response = await userAPI.registerWithOTP(name, email, password, mpin);
 
       setSuccessMessage('✓ Verification code sent to your email!');
       
       setTimeout(() => {
         setName('');
         setPassword('');
+        setMpin('');
+        setConfirmMpin('');
         setConfirmPassword('');
         setAgreeToTerms(false);
         setErrors({});
@@ -196,6 +210,35 @@ export default function SignUpScreen() {
             }}
             secureTextEntry
             error={errors.confirmPassword}
+          />
+
+          <Input
+            label="Create MPIN"
+            placeholder="4-digit MPIN"
+            value={mpin}
+            onChangeText={(text) => {
+              const digits = text.replace(/\D/g, '').slice(0, 4);
+              setMpin(digits);
+              if (digits) setErrors({ ...errors, mpin: undefined });
+            }}
+            keyboardType="numeric"
+            secureTextEntry
+            error={errors.mpin}
+            helperText="This MPIN will be used for fast login and payment confirmation"
+          />
+
+          <Input
+            label="Confirm MPIN"
+            placeholder="Re-enter MPIN"
+            value={confirmMpin}
+            onChangeText={(text) => {
+              const digits = text.replace(/\D/g, '').slice(0, 4);
+              setConfirmMpin(digits);
+              if (digits) setErrors({ ...errors, confirmMpin: undefined });
+            }}
+            keyboardType="numeric"
+            secureTextEntry
+            error={errors.confirmMpin}
           />
 
           {/* Terms Checkbox */}

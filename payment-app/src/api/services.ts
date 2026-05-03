@@ -23,13 +23,15 @@ export const userAPI = {
   /**
    * Login user and get JWT token
    * @param email - User's email address
-   * @param password - User's password
+   * @param password - User's password (optional if MPIN is used)
+   * @param mpin - User's 4-digit MPIN (optional if password is used)
    * @returns { token: string, user: { id, name, email, balance, created_at, updated_at } }
    */
-  login: async (email: string, password: string) => {
+  login: async (email: string, password?: string, mpin?: string) => {
     const response = await apiClient.post('/login', {
       email,
       password,
+      mpin,
     });
     return response.data;
   },
@@ -91,18 +93,29 @@ export const userAPI = {
 
   /**
    * Register with OTP verification
-   * Step 1: Send name, email, password to get OTP sent to email
+   * Step 1: Send name, email, password, mpin to get OTP sent to email
    * @param name - User's full name
    * @param email - User's email address
    * @param password - User's password (min 8 characters)
+   * @param mpin - User's 4-digit MPIN
    * @returns { message: string, email: string }
    */
-  registerWithOTP: async (name: string, email: string, password: string) => {
+  registerWithOTP: async (name: string, email: string, password: string, mpin: string) => {
     const response = await apiClient.post('/register-otp', {
       name,
       email,
       password,
+      mpin,
     });
+    return response.data;
+  },
+
+  /**
+   * Set or update account MPIN
+   * @param mpin - 4-digit MPIN
+   */
+  setMPIN: async (mpin: string) => {
+    const response = await apiClient.put('/mpin', { mpin });
     return response.data;
   },
 
@@ -146,12 +159,14 @@ export const paymentAPI = {
    * @param amount - Amount to transfer
    * @param currency - Currency code (e.g., 'USD', 'NPR')
    * @param note - Optional payment note
+   * @param mpin - Sender MPIN confirmation
    */
   sendPayment: async (
     receiver_id: string,
     amount: number,
     currency: string = 'USD',
-    note?: string
+    note?: string,
+    mpin?: string
   ) => {
     try {
       // For now, this needs a backend proxy endpoint
@@ -161,6 +176,7 @@ export const paymentAPI = {
         amount,
         currency,
         note,
+        mpin,
       });
       return response.data;
     } catch (error) {

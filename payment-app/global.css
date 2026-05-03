@@ -8,57 +8,147 @@
   }
 
   body {
-    @apply bg-white text-gray-900;
+    @apply bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900 font-sans;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 @layer components {
   /* Gradient utilities */
   .gradient-primary {
-    @apply bg-gradient-to-r from-purple-600 to-purple-500;
+    @apply bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 text-white shadow-lg;
   }
 
   .gradient-secondary {
-    @apply bg-gradient-to-r from-pink-500 to-pink-400;
+    @apply bg-gradient-to-r from-teal-500 to-cyan-400 text-white shadow-lg;
   }
 
   .gradient-accent {
-    @apply bg-gradient-to-r from-cyan-500 to-cyan-400;
+    @apply bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg;
+  }
+
+  .gradient-success {
+    @apply bg-gradient-to-r from-emerald-500 to-teal-400 text-white shadow-lg;
   }
 
   /* Card utilities */
   .card-elevated {
-    @apply rounded-2xl shadow-lg bg-white;
+    @apply rounded-2xl shadow-md bg-white backdrop-blur-sm border border-gray-100 transition-all duration-300;
   }
 
   .card-interactive {
-    @apply rounded-2xl shadow-lg bg-white transition-all duration-200 active:scale-95;
+    @apply rounded-2xl shadow-lg bg-white backdrop-blur-sm border border-gray-100 transition-all duration-200 hover:shadow-xl active:scale-95 cursor-pointer;
+  }
+
+  .card-premium {
+    @apply rounded-2xl shadow-xl bg-gradient-to-br from-white to-blue-50 backdrop-blur-md border border-blue-200;
   }
 
   /* Button utilities */
   .btn-primary {
-    @apply px-6 py-3 rounded-lg font-bold text-white shadow-lg transition-all duration-200 active:scale-95;
+    @apply px-6 py-3 rounded-xl font-bold text-white bg-blue-600 shadow-lg transition-all duration-200 hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 rounded-lg font-bold text-white shadow-lg transition-all duration-200 active:scale-95;
+    @apply px-6 py-3 rounded-xl font-bold text-white bg-teal-500 shadow-lg transition-all duration-200 hover:bg-teal-600 active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-accent {
+    @apply px-6 py-3 rounded-xl font-bold text-white bg-orange-500 shadow-lg transition-all duration-200 hover:bg-orange-600 active:scale-95;
+  }
+
+  .btn-outline {
+    @apply px-6 py-3 rounded-xl font-bold text-blue-600 border-2 border-blue-600 bg-transparent transition-all duration-200 hover:bg-blue-50 active:scale-95;
   }
 
   /* Input utilities */
   .input-enhanced {
-    @apply w-full px-4 py-3 rounded-lg font-medium text-gray-900 border-2 border-gray-300 transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-xl font-medium text-gray-900 border-2 border-gray-300 bg-white transition-all duration-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 focus:outline-none placeholder-gray-400;
   }
 
-  .input-enhanced:focus {
-    @apply border-purple-500 bg-purple-50 outline-none;
+  .input-focused {
+    @apply border-blue-600 ring-2 ring-blue-200 shadow-md;
+  }
+
+  .input-error {
+    @apply border-red-500 ring-2 ring-red-100;
+  }
+
+  /* Form styling */
+  .form-label {
+    @apply block text-sm font-bold text-gray-900 mb-2 tracking-tight;
+  }
+
+  .form-helper {
+    @apply text-xs text-gray-500 mt-1 font-medium;
+  }
+
+  .form-error {
+    @apply text-xs text-red-600 mt-1 font-bold flex items-center gap-1;
   }
 
   /* Badge utilities */
   .badge-success {
-    @apply inline-flex items-center px-3 py-1 rounded-full font-bold text-white shadow-sm;
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold text-xs;
   }
 
   .badge-error {
-    @apply inline-flex items-center px-3 py-1 rounded-full font-bold text-white shadow-sm;
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 font-semibold text-xs;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold text-xs;
+  }
+
+  .badge-info {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-xs;
+  }
+
+  /* Text utilities */
+  .text-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent;
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-fadeInUp {
+    animation: fadeInUp 0.3s ease-out;
+  }
+
+  .animate-slideInRight {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  /* Responsive utilities */
+  .responsive-container {
+    @apply px-4 sm:px-6 md:px-8 lg:px-12;
+  }
+
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6;
   }
 }

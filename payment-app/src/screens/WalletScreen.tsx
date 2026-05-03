@@ -40,10 +40,12 @@ export default function WalletScreen() {
   const [receiverId, setReceiverId] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
+  const [transferMpin, setTransferMpin] = useState('');
   const [transferCurrency, setTransferCurrency] = useState('NPR');
   const [errors, setErrors] = useState<{
     receiverEmail?: string;
     transferAmount?: string;
+    transferMpin?: string;
   }>({});
 
   // Fetch user data and balance
@@ -127,6 +129,10 @@ export default function WalletScreen() {
       newErrors.transferAmount = `Insufficient balance. Available: ${balance?.toFixed(2)}`;
     }
 
+    if (!/^\d{4}$/.test(transferMpin)) {
+      newErrors.transferMpin = 'Enter your 4-digit MPIN to confirm transfer';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -142,7 +148,8 @@ export default function WalletScreen() {
         receiverId,
         parseFloat(transferAmount),
         transferCurrency,
-        transferNote
+        transferNote,
+        transferMpin
       );
 
       window.alert(`Success! Transfer of ${transferAmount} ${transferCurrency} completed!`);
@@ -152,6 +159,7 @@ export default function WalletScreen() {
       setReceiverId('');
       setTransferAmount('');
       setTransferNote('');
+      setTransferMpin('');
       setErrors({});
       fetchWalletData();
     } catch (error: any) {
@@ -305,6 +313,32 @@ export default function WalletScreen() {
                 multiline
                 editable={!transferLoading}
               />
+            </View>
+
+            {/* MPIN Input */}
+            <View className="mb-6">
+              <Text className="text-gray-700 font-semibold text-sm mb-2">Confirm with MPIN</Text>
+              <TextInput
+                className={`border-2 rounded-lg px-4 py-3 text-gray-800 ${
+                  errors.transferMpin ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Enter 4-digit MPIN"
+                placeholderTextColor="#9ca3af"
+                value={transferMpin}
+                onChangeText={(text) => {
+                  const digits = text.replace(/\D/g, '').slice(0, 4);
+                  setTransferMpin(digits);
+                  if (errors.transferMpin) {
+                    setErrors({ ...errors, transferMpin: undefined });
+                  }
+                }}
+                keyboardType="numeric"
+                secureTextEntry
+                editable={!transferLoading}
+              />
+              {errors.transferMpin && (
+                <Text className="text-red-500 text-xs mt-1">{errors.transferMpin}</Text>
+              )}
             </View>
 
             {/* Transfer Button */}

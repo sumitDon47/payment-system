@@ -28,13 +28,17 @@ export default function OTPVerificationScreen() {
 
   // Resend timer countdown
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     if (resendTimer > 0) {
       timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
     } else if (resendTimer === 0 && resendDisabled) {
       setResendDisabled(false);
     }
-    return () => clearTimeout(timer);
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [resendTimer, resendDisabled]);
 
   const handleVerifyOTP = async () => {
