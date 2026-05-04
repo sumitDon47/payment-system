@@ -214,29 +214,29 @@ export default function SignUpScreen() {
 
           <Input
             label="Create MPIN"
-            placeholder="4-digit MPIN"
+            placeholder="0000"
             value={mpin}
             onChangeText={(text) => {
               const digits = text.replace(/\D/g, '').slice(0, 4);
               setMpin(digits);
               if (digits) setErrors({ ...errors, mpin: undefined });
             }}
-            keyboardType="numeric"
+            type="mpin"
             secureTextEntry
             error={errors.mpin}
-            helperText="This MPIN will be used for fast login and payment confirmation"
+            helperText="4-digit security code for fast login and payments"
           />
 
           <Input
             label="Confirm MPIN"
-            placeholder="Re-enter MPIN"
+            placeholder="0000"
             value={confirmMpin}
             onChangeText={(text) => {
               const digits = text.replace(/\D/g, '').slice(0, 4);
               setConfirmMpin(digits);
               if (digits) setErrors({ ...errors, confirmMpin: undefined });
             }}
-            keyboardType="numeric"
+            type="mpin"
             secureTextEntry
             error={errors.confirmMpin}
           />

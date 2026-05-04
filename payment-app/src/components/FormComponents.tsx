@@ -16,6 +16,8 @@ interface InputProps {
   onBlur?: () => void;
   icon?: string;
   editable?: boolean;
+  maxLength?: number;
+  type?: 'text' | 'amount' | 'mpin';
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -31,10 +33,49 @@ export const Input: React.FC<InputProps> = ({
   onBlur,
   icon,
   editable = true,
+  maxLength,
+  type = 'text',
 }) => {
   const [showPassword, setShowPassword] = useState(!secureTextEntry);
   const [isFocused, setIsFocused] = useState(false);
   const animatedScale = React.useRef(new Animated.Value(1)).current;
+
+  // Determine input type props based on field type
+  const getInputConfig = () => {
+    switch (type) {
+      case 'amount':
+        return {
+          keyboardType: 'decimal-pad' as const,
+          maxLength: 12,
+          handleChange: (text: string) => {
+            // Only allow numbers and one decimal point
+            const filtered = text.replace(/[^0-9.]/g, '');
+            const parts = filtered.split('.');
+            const result = parts.length > 2 
+              ? parts[0] + '.' + parts[1] 
+              : filtered;
+            onChangeText(result);
+          },
+        };
+      case 'mpin':
+        return {
+          keyboardType: 'numeric' as const,
+          maxLength: 4,
+          handleChange: (text: string) => {
+            const filtered = text.replace(/[^0-9]/g, '').slice(0, 4);
+            onChangeText(filtered);
+          },
+        };
+      default:
+        return {
+          keyboardType,
+          maxLength,
+          handleChange: onChangeText,
+        };
+    }
+  };
+
+  const config = getInputConfig();
 
   const handleFocus = () => {
     if (!editable) return;
@@ -97,12 +138,13 @@ export const Input: React.FC<InputProps> = ({
           <TextInput
             placeholder={placeholder}
             value={value}
-            onChangeText={onChangeText}
+            onChangeText={config.handleChange}
             secureTextEntry={secureTextEntry && !showPassword}
-            keyboardType={keyboardType}
+            keyboardType={config.keyboardType}
             onFocus={handleFocus}
             onBlur={handleBlur}
             editable={editable}
+            maxLength={config.maxLength}
             style={{
               flex: 1,
               paddingVertical: spacing.md,

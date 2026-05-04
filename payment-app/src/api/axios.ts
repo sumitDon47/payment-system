@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import { StorageUtil } from './storage';
 
 // Detect if running on web
 const isWeb = typeof window !== 'undefined';
@@ -16,9 +17,11 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
 });
 
 // Automatically attach JWT token to every request
+// Works for both web and native apps
 apiClient.interceptors.request.use(async (config) => {
   try {
     let token = null;
@@ -27,15 +30,30 @@ apiClient.interceptors.request.use(async (config) => {
       // Web: use sessionStorage
       token = sessionStorage.getItem('jwt_token');
     } else {
-      // Native: will be handled by storage utility
-      // For now, just skip - LoginScreen will use StorageUtil
+      // Native: use secure storage
+      token = await StorageUtil.getItem('jwt_token');
     }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
   } catch (error) {
-    console.error('Error reading token:', error);
+    console.error('Error reading token from storage:', error);
   }
   return config;
 });
+
+// Add response error interceptor for better error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 Unauthorized - token expired or invalid
+    if (error.response?.status === 401) {
+      console.warn('⚠️ Unauthorized - token may be expired');
+      if (!isWeb) {
+        StorageUtil.removeItem('jwt_token');
+      }
+    }
+    return Promise.reject(error);
+  }
+);

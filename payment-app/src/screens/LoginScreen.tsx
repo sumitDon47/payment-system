@@ -217,14 +217,14 @@ export default function LoginScreen() {
           ) : (
             <Input
               label="MPIN"
-              placeholder="Enter 4-digit MPIN"
+              placeholder="0000"
               value={mpin}
               onChangeText={(text) => {
                 const digits = text.replace(/\D/g, '').slice(0, 4);
                 setMpin(digits);
                 if (digits) setErrors({ ...errors, mpin: undefined });
               }}
-              keyboardType="numeric"
+              type="mpin"
               secureTextEntry
               error={errors.mpin}
               icon="🔢"

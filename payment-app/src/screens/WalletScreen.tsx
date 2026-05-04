@@ -142,33 +142,61 @@ export default function WalletScreen() {
       return;
     }
 
-    setTransferLoading(true);
-    try {
-      const response = await paymentAPI.sendPayment(
-        receiverId,
-        parseFloat(transferAmount),
-        transferCurrency,
-        transferNote,
-        transferMpin
-      );
+    // Show confirmation dialog
+    Alert.alert(
+      '🔐 Confirm Transfer',
+      `Send ${transferAmount} ${transferCurrency} to ${receiverEmail}?`,
+      [
+        {
+          text: 'Cancel',
+          onPress: () => console.log('Transfer cancelled'),
+          style: 'cancel',
+        },
+        {
+          text: 'Send',
+          onPress: async () => {
+            setTransferLoading(true);
+            try {
+              const response = await paymentAPI.sendPayment(
+                receiverId,
+                parseFloat(transferAmount),
+                transferCurrency,
+                transferNote,
+                transferMpin
+              );
 
-      window.alert(`Success! Transfer of ${transferAmount} ${transferCurrency} completed!`);
-      // Reset form and refresh balance
-      setShowTransferForm(false);
-      setReceiverEmail('');
-      setReceiverId('');
-      setTransferAmount('');
-      setTransferNote('');
-      setTransferMpin('');
-      setErrors({});
-      fetchWalletData();
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.error || error.message || 'Transfer failed';
-      console.error('Transfer error:', error);
-      window.alert('Error: ' + errorMsg);
-    } finally {
-      setTransferLoading(false);
-    }
+              Alert.alert(
+                '✅ Success',
+                `Transfer of ${transferAmount} ${transferCurrency} completed!`,
+                [
+                  {
+                    text: 'OK',
+                    onPress: async () => {
+                      // Reset form and refresh balance
+                      setShowTransferForm(false);
+                      setReceiverEmail('');
+                      setReceiverId('');
+                      setTransferAmount('');
+                      setTransferNote('');
+                      setTransferMpin('');
+                      setErrors({});
+                      await fetchWalletData();
+                    },
+                  },
+                ]
+              );
+            } catch (error: any) {
+              const errorMsg = error.response?.data?.error || error.message || 'Transfer failed';
+              console.error('Transfer error:', error);
+              Alert.alert('❌ Transfer Failed', errorMsg);
+            } finally {
+              setTransferLoading(false);
+            }
+          },
+          style: 'default',
+        },
+      ]
+    );
   };
 
   const handleLogout = async () => {
@@ -273,7 +301,7 @@ export default function WalletScreen() {
 
             {/* Amount Input */}
             <View className="mb-5">
-              <Text className="text-gray-700 font-semibold text-sm mb-2">Amount</Text>
+              <Text className="text-gray-700 font-semibold text-sm mb-2">Amount ({transferCurrency})</Text>
               <View className="flex-row items-center border-2 border-gray-300 rounded-lg overflow-hidden">
                 <TextInput
                   className="flex-1 px-4 py-3 text-gray-800"
@@ -281,23 +309,30 @@ export default function WalletScreen() {
                   placeholderTextColor="#9ca3af"
                   value={transferAmount}
                   onChangeText={(text) => {
-                    setTransferAmount(text);
+                    // Only allow numbers and one decimal point
+                    const filtered = text.replace(/[^0-9.]/g, '');
+                    const parts = filtered.split('.');
+                    const result = parts.length > 2 
+                      ? parts[0] + '.' + parts[1] 
+                      : filtered;
+                    setTransferAmount(result);
                     if (errors.transferAmount) {
                       setErrors({ ...errors, transferAmount: undefined });
                     }
                   }}
                   keyboardType="decimal-pad"
                   editable={!transferLoading}
+                  maxLength={12}
                 />
                 <View className="bg-gray-100 px-4 py-3">
                   <Text className="text-gray-700 font-semibold">{transferCurrency}</Text>
                 </View>
               </View>
               {errors.transferAmount && (
-                <Text className="text-red-500 text-xs mt-1">{errors.transferAmount}</Text>
+                <Text className="text-red-500 text-xs mt-1">✕ {errors.transferAmount}</Text>
               )}
               <Text className="text-gray-500 text-xs mt-2">
-                Available: {balance?.toFixed(2)} {transferCurrency}
+                💰 Available: {balance?.toFixed(2)} {transferCurrency}
               </Text>
             </View>
 
