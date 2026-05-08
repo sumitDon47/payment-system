@@ -5,29 +5,57 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/sumitDon47/payment-system/payment-service/db"
+	"github.com/sumitDon47/payment-system/payment-service/metrics"
 	model "github.com/sumitDon47/payment-system/payment-service/models"
 	pb "github.com/sumitDon47/payment-system/payment-service/proto"
+	"github.com/sumitDon47/payment-system/payment-service/utils"
 )
 
 // Server implements the gRPC PaymentServiceServer interface
 type Server struct{}
 
 func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*pb.SendPaymentResponse, error) {
+	startTime := time.Now()
+	defer func() {
+		duration := time.Since(startTime).Seconds()
+		metrics.PaymentDuration.WithLabelValues("send_payment").Observe(duration)
+	}()
 
+	// Validation
 	if req.SenderID == "" || req.ReceiverID == "" {
+		metrics.ErrorCounter.WithLabelValues("missing_fields").Inc()
+		utils.Warn("SendPayment validation failed", map[string]interface{}{
+			"error": "sender_id and receiver_id are required",
+		})
 		return nil, fmt.Errorf("sender_id and receiver_id are required")
 	}
 	if req.SenderID == req.ReceiverID {
+		metrics.ErrorCounter.WithLabelValues("self_transfer").Inc()
+		utils.Warn("SendPayment validation failed", map[string]interface{}{
+			"sender_id": req.SenderID,
+			"error":     "cannot send payment to yourself",
+		})
 		return nil, fmt.Errorf("cannot send payment to yourself")
 	}
 	if req.Amount <= 0 {
+		metrics.ErrorCounter.WithLabelValues("invalid_amount").Inc()
+		utils.Warn("SendPayment validation failed", map[string]interface{}{
+			"sender_id": req.SenderID,
+			"amount":    req.Amount,
+			"error":     "amount must be greater than zero",
+		})
 		return nil, fmt.Errorf("amount must be greater than zero")
 	}
 	if req.Amount > 1_000_000 {
+		metrics.ErrorCounter.WithLabelValues("amount_limit_exceeded").Inc()
+		utils.Warn("SendPayment validation failed", map[string]interface{}{
+			"sender_id": req.SenderID,
+			"amount":    req.Amount,
+			"error":     "amount exceeds single-transaction limit",
+		})
 		return nil, fmt.Errorf("amount exceeds single-transaction limit")
 	}
 
@@ -36,45 +64,84 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 		currency = "NPR"
 	}
 
+	utils.Info("SendPayment initiated", map[string]interface{}{
+		"sender_id":   req.SenderID,
+		"receiver_id": req.ReceiverID,
+		"amount":      req.Amount,
+		"currency":    currency,
+	})
+
+	// Check receiver exists
 	var receiverExists bool
 	err := db.DB.QueryRowContext(ctx,
 		`SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)`,
 		req.ReceiverID,
 	).Scan(&receiverExists)
 	if err != nil || !receiverExists {
+		metrics.ErrorCounter.WithLabelValues("receiver_not_found").Inc()
+		utils.Error("Receiver validation failed", fmt.Errorf("receiver not found"), map[string]interface{}{
+			"receiver_id": req.ReceiverID,
+		})
 		return nil, fmt.Errorf("receiver not found")
 	}
 
+	// Begin transaction with SERIALIZABLE isolation
 	tx, err := db.DB.BeginTx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelSerializable,
 	})
 	if err != nil {
+		metrics.ErrorCounter.WithLabelValues("transaction_begin_failed").Inc()
+		utils.Error("Failed to begin transaction", err, map[string]interface{}{
+			"sender_id": req.SenderID,
+		})
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	defer func() {
 		if err != nil {
 			tx.Rollback()
-			log.Printf("Transaction rolled back: %v", err)
+			utils.Info("Transaction rolled back", map[string]interface{}{
+				"sender_id":   req.SenderID,
+				"receiver_id": req.ReceiverID,
+				"error":       err.Error(),
+			})
 		}
 	}()
 
+	// Get sender balance with FOR UPDATE lock
 	var senderBalance float64
 	err = tx.QueryRowContext(ctx,
 		`SELECT balance FROM users WHERE id = $1 FOR UPDATE`,
 		req.SenderID,
 	).Scan(&senderBalance)
 	if err == sql.ErrNoRows {
+		metrics.ErrorCounter.WithLabelValues("sender_not_found").Inc()
+		utils.Error("Sender not found", err, map[string]interface{}{
+			"sender_id": req.SenderID,
+		})
 		return nil, fmt.Errorf("sender not found")
 	}
 	if err != nil {
+		metrics.ErrorCounter.WithLabelValues("balance_fetch_failed").Inc()
+		utils.Error("Failed to fetch sender balance", err, map[string]interface{}{
+			"sender_id": req.SenderID,
+		})
 		return nil, fmt.Errorf("failed to fetch sender: %w", err)
 	}
+
+	// Check balance
 	if senderBalance < req.Amount {
+		metrics.ErrorCounter.WithLabelValues("insufficient_funds").Inc()
+		utils.Warn("Insufficient funds", map[string]interface{}{
+			"sender_id": req.SenderID,
+			"balance":   senderBalance,
+			"amount":    req.Amount,
+		})
 		return nil, fmt.Errorf("insufficient funds: have %.2f, need %.2f", senderBalance, req.Amount)
 	}
 	newSenderBalance := senderBalance - req.Amount
 
+	// Create transaction record
 	var txnID string
 	err = tx.QueryRowContext(ctx,
 		`INSERT INTO transactions (sender_id, receiver_id, amount, currency, status, note)
@@ -83,33 +150,56 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 		req.SenderID, req.ReceiverID, req.Amount, currency, model.StatusPending, req.Note,
 	).Scan(&txnID)
 	if err != nil {
+		metrics.ErrorCounter.WithLabelValues("transaction_creation_failed").Inc()
+		utils.Error("Failed to create transaction record", err, map[string]interface{}{
+			"sender_id":   req.SenderID,
+			"receiver_id": req.ReceiverID,
+		})
 		return nil, fmt.Errorf("failed to create transaction record: %w", err)
 	}
 
+	// Debit sender
 	_, err = tx.ExecContext(ctx,
 		`UPDATE users SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
 		req.Amount, req.SenderID,
 	)
 	if err != nil {
+		metrics.ErrorCounter.WithLabelValues("debit_failed").Inc()
+		utils.Error("Failed to debit sender", err, map[string]interface{}{
+			"sender_id": req.SenderID,
+			"amount":    req.Amount,
+		})
 		return nil, fmt.Errorf("failed to debit sender: %w", err)
 	}
 
+	// Credit receiver
 	_, err = tx.ExecContext(ctx,
 		`UPDATE users SET balance = balance + $1, updated_at = NOW() WHERE id = $2`,
 		req.Amount, req.ReceiverID,
 	)
 	if err != nil {
+		metrics.ErrorCounter.WithLabelValues("credit_failed").Inc()
+		utils.Error("Failed to credit receiver", err, map[string]interface{}{
+			"receiver_id": req.ReceiverID,
+			"amount":      req.Amount,
+		})
 		return nil, fmt.Errorf("failed to credit receiver: %w", err)
 	}
 
+	// Update transaction status
 	_, err = tx.ExecContext(ctx,
 		`UPDATE transactions SET status = $1 WHERE id = $2`,
 		model.StatusCompleted, txnID,
 	)
 	if err != nil {
+		metrics.ErrorCounter.WithLabelValues("status_update_failed").Inc()
+		utils.Error("Failed to update transaction status", err, map[string]interface{}{
+			"transaction_id": txnID,
+		})
 		return nil, fmt.Errorf("failed to update transaction status: %w", err)
 	}
 
+	// Create outbox event
 	event := model.PaymentEvent{
 		EventType:     model.TopicPaymentCompleted,
 		TransactionID: txnID,
@@ -124,6 +214,10 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 
 	payload, err := json.Marshal(event)
 	if err != nil {
+		metrics.ErrorCounter.WithLabelValues("event_encoding_failed").Inc()
+		utils.Error("Failed to encode outbox event", err, map[string]interface{}{
+			"transaction_id": txnID,
+		})
 		return nil, fmt.Errorf("failed to encode outbox event: %w", err)
 	}
 
@@ -136,10 +230,18 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 		model.OutboxStatusPending,
 	)
 	if err != nil {
+		metrics.ErrorCounter.WithLabelValues("outbox_insert_failed").Inc()
+		utils.Error("Failed to enqueue outbox event", err, map[string]interface{}{
+			"transaction_id": txnID,
+		})
 		return nil, fmt.Errorf("failed to enqueue outbox event: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
+		metrics.ErrorCounter.WithLabelValues("transaction_commit_failed").Inc()
+		utils.Error("Failed to commit transaction", err, map[string]interface{}{
+			"transaction_id": txnID,
+		})
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
@@ -148,7 +250,19 @@ func (s *Server) SendPayment(ctx context.Context, req *pb.SendPaymentRequest) (*
 		`SELECT balance FROM users WHERE id = $1`, req.SenderID,
 	).Scan(&newBalance)
 
-	log.Printf("Payment %s: %s -> %s | %.2f %s", txnID, req.SenderID, req.ReceiverID, req.Amount, currency)
+	// Record metrics
+	metrics.PaymentCounter.WithLabelValues("success", currency).Inc()
+	metrics.PaymentAmount.WithLabelValues(currency).Observe(req.Amount)
+
+	// Structured logging for successful payment
+	utils.Info("Payment completed successfully", map[string]interface{}{
+		"transaction_id": txnID,
+		"sender_id":      req.SenderID,
+		"receiver_id":    req.ReceiverID,
+		"amount":         req.Amount,
+		"currency":       currency,
+		"sender_balance": newBalance,
+	})
 
 	return &pb.SendPaymentResponse{
 		TransactionID: txnID,

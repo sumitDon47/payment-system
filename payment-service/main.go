@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -18,16 +17,24 @@ import (
 	"github.com/sumitDon47/payment-system/payment-service/middleware"
 	model "github.com/sumitDon47/payment-system/payment-service/models"
 	"github.com/sumitDon47/payment-system/payment-service/outbox"
+	"github.com/sumitDon47/payment-system/payment-service/utils"
 	pb "github.com/sumitDon47/payment-system/payment-service/proto"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection" // allows tools like grpcurl to inspect your service
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
 	_ = godotenv.Load()
 
+	// Log startup
+	utils.Info("Payment Service starting", map[string]interface{}{
+		"service": "payment-service",
+		"environment": os.Getenv("ENVIRONMENT"),
+	})
+
 	// Connect to PostgreSQL
 	db.Connect()
+	utils.Info("Database connected", map[string]interface{}{})
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -42,15 +49,21 @@ func main() {
 	// Create a TCP listener
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatalf("❌ Failed to listen: %v", err)
+		utils.Error("Failed to listen on port", err, map[string]interface{}{
+			"port": port,
+		})
+		os.Exit(1)
 	}
 
 	// Start a separate HTTP server for Prometheus metrics
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		log.Printf("📊 Prometheus metrics (HTTP) available on :8081/metrics")
+		utils.Info("Prometheus metrics server started", map[string]interface{}{
+			"port": "8081",
+			"path": "/metrics",
+		})
 		if err := http.ListenAndServe(":8081", nil); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("❌ Failed to start metrics server: %v", err)
+			utils.Error("Failed to start metrics server", err, map[string]interface{}{})
 		}
 	}()
 
@@ -68,26 +81,35 @@ func main() {
 
 	if strings.EqualFold(getEnv("ENABLE_GRPC_REFLECTION", "false"), "true") {
 		reflection.Register(grpcServer)
-		log.Println("gRPC reflection enabled")
+		utils.Info("gRPC reflection enabled", map[string]interface{}{})
 	}
 
 	// Start the outbox dispatcher to publish pending events to Kafka.
 	dispatcher := outbox.NewDispatcher(db.DB, kafkaBroker, kafkaTopic, dlqTopic, maxRetries)
 	go dispatcher.Start(ctx)
+	utils.Info("Outbox dispatcher started", map[string]interface{}{
+		"kafka_broker": kafkaBroker,
+		"max_retries": maxRetries,
+	})
 
 	go func() {
 		<-ctx.Done()
-		log.Println("🛑 Shutdown signal received, stopping gRPC server")
+		utils.Info("Shutdown signal received", map[string]interface{}{})
 		grpcServer.GracefulStop()
 	}()
 
-	log.Printf("🚀 Payment Service (gRPC) listening on :%s", port)
+	utils.Info("Payment Service listening", map[string]interface{}{
+		"port": port,
+		"protocol": "gRPC",
+	})
 	if err := grpcServer.Serve(lis); err != nil {
 		if ctx.Err() == nil {
-			log.Fatalf("❌ gRPC server failed: %v", err)
+			utils.Error("gRPC server failed", err, map[string]interface{}{})
+			os.Exit(1)
 		}
-		log.Println("Payment service stopped")
+		utils.Info("Payment service stopped", map[string]interface{}{})
 	}
+}
 }
 
 func getEnv(key, defaultVal string) string {
