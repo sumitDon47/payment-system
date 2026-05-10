@@ -48,7 +48,6 @@ jobs:
           DB_USER: postgres
           DB_PASSWORD: yourpassword
           DB_NAME: payment_db
-          DISABLE_RATE_LIMITING: "true"
         run: |
           go mod tidy
           go test ./... -v -coverprofile=coverage.out -covermode=atomic
@@ -94,7 +93,6 @@ jobs:
           DB_USER: postgres
           DB_PASSWORD: yourpassword
           DB_NAME: payment_db
-          DISABLE_RATE_LIMITING: "true"
         run: |
           go mod tidy
           go test ./... -v -coverprofile=coverage.out -covermode=atomic
@@ -118,8 +116,6 @@ jobs:
 
       - name: Run tests
         working-directory: notification-service
-        env:
-          DISABLE_RATE_LIMITING: "true"
         run: |
           go mod tidy
           go test ./... -v

@@ -21,7 +21,7 @@ func TestRateLimiterInterceptor_NewInstance(t *testing.T) {
 
 func TestRateLimiterInterceptor_Allow(t *testing.T) {
 	limiter := NewRateLimiterInterceptor()
-	userID := "user-123"
+	userID := "user-allow-" + t.Name() // Unique per test
 
 	// First request should be allowed (initial burst)
 	if !limiter.Allow(userID) {
@@ -36,8 +36,8 @@ func TestRateLimiterInterceptor_Allow(t *testing.T) {
 
 func TestRateLimiterInterceptor_PerUser(t *testing.T) {
 	limiter := NewRateLimiterInterceptor()
-	user1 := "user-123"
-	user2 := "user-456"
+	user1 := "user-peruser-1-" + t.Name() // Unique per test
+	user2 := "user-peruser-2-" + t.Name() // Unique per test
 
 	// Both users should be able to make requests
 	if !limiter.Allow(user1) {
@@ -58,7 +58,7 @@ func TestRateLimiterInterceptor_PerUser(t *testing.T) {
 
 func TestSendPaymentLimiter_HighLimit(t *testing.T) {
 	limiter := NewSendPaymentLimiter()
-	userID := "user-123"
+	userID := "user-sendpay-high-" + t.Name() // Unique per test
 
 	// Send payment limiter should allow requests in burst
 	allowedCount := 0
@@ -81,7 +81,7 @@ func TestSendPaymentLimiter_HighLimit(t *testing.T) {
 
 func TestGetTransactionLimiter_ModerateLimit(t *testing.T) {
 	limiter := NewGetTransactionLimiter()
-	userID := "user-123"
+	userID := "user-gettxn-moderate-" + t.Name() // Unique per test
 
 	// GetTransaction limiter: 1000 requests per minute
 	allowedCount := 0
@@ -129,16 +129,17 @@ func TestUnaryServerInterceptor_RateLimitExceeded(t *testing.T) {
 	// Create a limiter with a very strict limit to trigger rate limiting
 	limiter := NewRateLimiterInterceptor()
 
-	// Exhaust the burst by making rapid requests to "test-method"
+	// Exhaust the burst by making rapid requests to a unique method
+	methodName := "test-method-" + t.Name()
 	for i := 0; i < 100; i++ {
-		limiter.Allow("test-method")
+		limiter.Allow(methodName)
 	}
 
 	// Now it should be rate limited
 	interceptor := UnaryServerInterceptor(limiter)
 
 	info := &grpc.UnaryServerInfo{
-		FullMethod: "test-method",
+		FullMethod: methodName,
 	}
 
 	ctx := context.Background()
@@ -181,7 +182,7 @@ func TestRateLimitSendPayment(t *testing.T) {
 }
 
 func TestRateLimitGetTransaction(t *testing.T) {
-	userID := "user-456"
+	userID := "user-gettxn-" + t.Name() // Unique per test
 
 	// First request should be allowed
 	if !RateLimitGetTransaction(userID) {

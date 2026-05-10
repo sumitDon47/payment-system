@@ -3,8 +3,6 @@ package middleware
 import (
 	"context"
 	"log"
-	"os"
-	"strings"
 	"sync"
 
 	"golang.org/x/time/rate"
@@ -12,12 +10,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-// isRateLimitingDisabled checks if rate limiting should be disabled (for testing)
-func isRateLimitingDisabled() bool {
-	env := strings.ToLower(os.Getenv("DISABLE_RATE_LIMITING"))
-	return env == "true" || env == "1"
-}
 
 // RateLimiterInterceptor stores per-user rate limiters for gRPC
 type RateLimiterInterceptor struct {
@@ -67,11 +59,6 @@ func UnaryServerInterceptor(limiter *RateLimiterInterceptor) grpc.UnaryServerInt
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-		// Check if rate limiting is disabled (for testing)
-		if isRateLimitingDisabled() {
-			return handler(ctx, req)
-		}
-
 		// Rate limit based on method name (you could also extract user ID from request)
 		// For now, we use method name as the identifier
 		method := info.FullMethod
