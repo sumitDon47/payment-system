@@ -17,8 +17,8 @@ import (
 	"github.com/sumitDon47/payment-system/payment-service/middleware"
 	model "github.com/sumitDon47/payment-system/payment-service/models"
 	"github.com/sumitDon47/payment-system/payment-service/outbox"
-	"github.com/sumitDon47/payment-system/payment-service/utils"
 	pb "github.com/sumitDon47/payment-system/payment-service/proto"
+	"github.com/sumitDon47/payment-system/payment-service/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -28,7 +28,7 @@ func main() {
 
 	// Log startup
 	utils.Info("Payment Service starting", map[string]interface{}{
-		"service": "payment-service",
+		"service":     "payment-service",
 		"environment": os.Getenv("ENVIRONMENT"),
 	})
 
@@ -89,7 +89,7 @@ func main() {
 	go dispatcher.Start(ctx)
 	utils.Info("Outbox dispatcher started", map[string]interface{}{
 		"kafka_broker": kafkaBroker,
-		"max_retries": maxRetries,
+		"max_retries":  maxRetries,
 	})
 
 	go func() {
@@ -99,7 +99,7 @@ func main() {
 	}()
 
 	utils.Info("Payment Service listening", map[string]interface{}{
-		"port": port,
+		"port":     port,
 		"protocol": "gRPC",
 	})
 	if err := grpcServer.Serve(lis); err != nil {
@@ -109,7 +109,6 @@ func main() {
 		}
 		utils.Info("Payment service stopped", map[string]interface{}{})
 	}
-}
 }
 
 func getEnv(key, defaultVal string) string {

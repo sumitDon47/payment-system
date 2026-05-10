@@ -4,11 +4,18 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
 	"golang.org/x/time/rate"
 )
+
+// isRateLimitingDisabled checks if rate limiting should be disabled (for testing)
+func isRateLimitingDisabled() bool {
+	env := strings.ToLower(os.Getenv("DISABLE_RATE_LIMITING"))
+	return env == "true" || env == "1"
+}
 
 // RateLimiter stores per-IP rate limiters
 type RateLimiter struct {
@@ -84,6 +91,12 @@ var (
 func RateLimitMiddleware(limiter *RateLimiter, limit int, burst int) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Check if rate limiting is disabled (for testing)
+			if isRateLimitingDisabled() {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			clientIP := GetClientIP(r)
 
 			// Create a custom limiter for this specific request
@@ -104,6 +117,12 @@ func RateLimitMiddleware(limiter *RateLimiter, limit int, burst int) func(http.H
 // Simpler version: just wraps a single handler
 func RateLimitHandler(limiter *RateLimiter, handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Check if rate limiting is disabled (for testing)
+		if isRateLimitingDisabled() {
+			handler(w, r)
+			return
+		}
+
 		clientIP := GetClientIP(r)
 
 		if !limiter.Allow(clientIP) {
