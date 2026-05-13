@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,19 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { userAPI } from '../api/services';
 import { StorageUtil } from '../api/storage';
 import { useNavigation } from '../navigation/NavigationContext';
 import { Input, FormError, FormSuccess } from '../components/FormComponents';
-import { Button, Card, Divider } from '../components/UI';
+import { Button, Divider } from '../components/UI';
+import {
+  GradientContainer,
+  Card,
+  EnhancedButton,
+  AnimatedMessage,
+} from '../components/EnhancedComponents';
 import { colors } from '../styles/colors';
 import { spacing, borderRadius, scale } from '../styles/theme';
 
@@ -24,6 +31,25 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; mpin?: string }>({});
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Animation references
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Animate on screen load
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
@@ -93,15 +119,22 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.lg }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <GradientContainer variant="primary">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.lg }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }}
+          >
         {/* Header Section */}
         <View style={{ alignItems: 'center', marginTop: spacing['3xl'], marginBottom: spacing['3xl'] }}>
           <View
@@ -130,7 +163,7 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        <Card padding={spacing.xl} borderRadius={borderRadius.xl} shadow="lg">
+        <Card variant="elevated" gradient>
           {/* Title */}
           <Text style={{ fontSize: scale(24), fontWeight: '800', color: colors.text, marginBottom: spacing.sm, letterSpacing: 0.3 }}>
             Welcome Back
@@ -244,13 +277,15 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Login Button */}
-          <Button
+          <EnhancedButton
             title={loading ? 'Signing in...' : 'Sign In'}
             onPress={handleLogin}
             loading={loading}
             disabled={loading}
             fullWidth
             size="lg"
+            variant="primary"
+            showGlow
           />
 
           {/* Divider */}
@@ -283,7 +318,9 @@ export default function LoginScreen() {
         >
           By signing in, you agree to our{'\n'}Terms of Service and Privacy Policy
         </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </GradientContainer>
   );
 }
