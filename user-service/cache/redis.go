@@ -149,6 +149,54 @@ func (c *Client) InvalidateMultiple(ctx context.Context, userIDs ...string) {
 	}
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Generic cache operations (used by phone OTP and other features)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Get retrieves a generic value from cache by key.
+// Returns empty string on miss or error.
+func (c *Client) Get(ctx context.Context, key string) (string, error) {
+	if c == nil {
+		return "", fmt.Errorf("redis not available")
+	}
+
+	val, err := c.rdb.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	if err != nil {
+		log.Printf("Redis GET error for %s: %v", key, err)
+		return "", err
+	}
+	return val, nil
+}
+
+// Set stores a generic value in cache with TTL.
+func (c *Client) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
+	if c == nil {
+		return fmt.Errorf("redis not available")
+	}
+
+	if err := c.rdb.Set(ctx, key, value, ttl).Err(); err != nil {
+		log.Printf("⚠️  Redis SET error for %s: %v", key, err)
+		return err
+	}
+	return nil
+}
+
+// Delete removes a key from cache.
+func (c *Client) Delete(ctx context.Context, key string) error {
+	if c == nil {
+		return fmt.Errorf("redis not available")
+	}
+
+	if err := c.rdb.Del(ctx, key).Err(); err != nil {
+		log.Printf("⚠️  Redis DEL error for %s: %v", key, err)
+		return err
+	}
+	return nil
+}
+
 // HealthCheck returns Redis ping latency — useful for /health endpoint.
 func (c *Client) HealthCheck(ctx context.Context) error {
 	if c == nil {

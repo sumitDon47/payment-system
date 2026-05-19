@@ -169,6 +169,7 @@ func TestLimitAuth_RateLimitExceeded(t *testing.T) {
 		if rec.Code == http.StatusTooManyRequests {
 			blockedCount++
 		}
+		time.Sleep(time.Millisecond)
 	}
 
 	if blockedCount == 0 {
@@ -254,6 +255,7 @@ func TestRateLimit_DifferentEndpoints(t *testing.T) {
 		if apiLimiter.Allow(ip) {
 			apiAllowed++
 		}
+		time.Sleep(time.Millisecond)
 	}
 
 	// API limiter should allow more requests
